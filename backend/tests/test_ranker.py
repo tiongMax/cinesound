@@ -1,4 +1,4 @@
-"""Ranker + Pairer tests — gemini_chat mocked."""
+"""Ranker + Pairer tests — gemini_chat_with_tools mocked."""
 
 from unittest.mock import AsyncMock
 
@@ -107,7 +107,7 @@ def test_top_n_sorts_by_score_desc_and_truncates():
 
 async def test_rank_and_pair_returns_empty_pairing_when_all_filtered(monkeypatch):
     mock = AsyncMock(return_value=_stub_rec())
-    monkeypatch.setattr(ranker, "gemini_chat", mock)
+    monkeypatch.setattr(ranker, "gemini_chat_with_tools", mock)
 
     movies = [_movie(1, 0.9), _movie(2, 0.8)]
     music = [_music("spotify:track:a", 0.9)]
@@ -123,7 +123,7 @@ async def test_rank_and_pair_returns_empty_pairing_when_all_filtered(monkeypatch
 
 async def test_rank_and_pair_calls_gemini_with_top_candidates(monkeypatch):
     mock = AsyncMock(return_value=_stub_rec())
-    monkeypatch.setattr(ranker, "gemini_chat", mock)
+    monkeypatch.setattr(ranker, "gemini_chat_with_tools", mock)
 
     movies = [_movie(i, 0.1 * i, f"Movie{i}") for i in range(1, 11)]
     music = [_music(f"spotify:track:{i}", 0.1 * i) for i in range(1, 11)]
@@ -141,7 +141,7 @@ async def test_rank_and_pair_calls_gemini_with_top_candidates(monkeypatch):
 
 async def test_rank_and_pair_filters_then_picks(monkeypatch):
     mock = AsyncMock(return_value=_stub_rec())
-    monkeypatch.setattr(ranker, "gemini_chat", mock)
+    monkeypatch.setattr(ranker, "gemini_chat_with_tools", mock)
 
     movies = [_movie(1, 0.95), _movie(2, 0.90)]
     music = [_music("spotify:track:a", 0.95), _music("spotify:track:b", 0.90)]

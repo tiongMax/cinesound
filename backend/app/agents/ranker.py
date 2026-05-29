@@ -11,7 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.clients.gemini import gemini_chat
+from app.agents.tools import RANKER_TOOLS
+from app.clients.gemini import gemini_chat_with_tools
 from app.schemas import MovieCandidate, MusicCandidate, Recommendation, TasteProfile
 
 TOP_N_PER_DOMAIN = 5
@@ -27,8 +28,16 @@ been pre-filtered for taste. Your job:
    moment of the product — be specific, evocative, no clichés.
 4. Set `mood_detected` to the shared mood verbatim.
 
-Use the candidate metadata as-is for tmdb_id, spotify_uri, title, year, etc.
-Do not invent fields. Output a single Recommendation JSON object."""
+You have two optional tools available:
+ - `get_movie_details(tmdb_id)` — pulls a richer overview / tagline / runtime for a
+   specific candidate. Use this sparingly (max 1-2 calls) when the short overview
+   isn't enough to choose between top candidates.
+ - `get_artist_top_tracks(artist_name)` — when the user named a reference artist in
+   their query, use this to ground your music pick against that artist's catalogue.
+
+Skip the tools entirely if the choice is already obvious. Use the candidate
+metadata as-is for tmdb_id, spotify_uri, title, year, etc. Do not invent fields.
+Output a single Recommendation JSON object."""
 
 
 def filter_seen(
@@ -111,8 +120,9 @@ async def rank_and_pair(
         )
 
     prompt = _build_prompt(profile, movies, music)
-    return await gemini_chat(
+    return await gemini_chat_with_tools(
         prompt,
+        tools=RANKER_TOOLS,
         response_schema=Recommendation,
         system=RANKER_SYSTEM,
         temperature=0.6,
