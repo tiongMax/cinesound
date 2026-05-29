@@ -2,14 +2,15 @@
 
 import Image from "next/image";
 import { ExternalLink, Music } from "lucide-react";
-import type { MusicRec } from "@/lib/types";
+import type { MusicRec, Vote } from "@/lib/types";
+import VoteButtons from "./VoteButtons";
 
 interface Props {
   music: MusicRec;
-  onVote?: (vote: "up" | "down") => void;
+  onVote?: (vote: Vote) => Promise<void> | void;
 }
 
-export default function MusicCard({ music }: Props) {
+export default function MusicCard({ music, onVote }: Props) {
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-muted/20">
       <div className="flex gap-4 p-4">
@@ -40,14 +41,17 @@ export default function MusicCard({ music }: Props) {
             </span>
           </div>
           <p className="text-sm text-muted-foreground">{music.reason}</p>
-          <a
-            href={music.spotify_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline"
-          >
-            Open in Spotify <ExternalLink className="h-3 w-3" />
-          </a>
+          <div className="mt-2 flex items-center justify-between">
+            <a
+              href={music.spotify_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline"
+            >
+              Open in Spotify <ExternalLink className="h-3 w-3" />
+            </a>
+            {onVote && <VoteButtons onVote={onVote} />}
+          </div>
         </div>
       </div>
     </div>

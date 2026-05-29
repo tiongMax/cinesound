@@ -1,10 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { postFeedback } from "@/lib/feedback";
 import { streamQuery } from "@/lib/queryClient";
 import { getOrCreateSessionId } from "@/lib/session";
-import type { Recommendation } from "@/lib/types";
+import type { Recommendation, Vote } from "@/lib/types";
 import RecommendationBlock from "./RecommendationBlock";
 
 type Turn = {
@@ -50,6 +51,14 @@ export default function Chat() {
   const updateTurn = (id: string, patch: Partial<Turn>) => {
     setTurns((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
   };
+
+  const handleVote = useCallback(
+    async (target: { tmdb_id?: number; spotify_uri?: string }, vote: Vote) => {
+      if (!sessionId) return;
+      await postFeedback({ session_id: sessionId, vote, ...target });
+    },
+    [sessionId],
+  );
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,7 +144,7 @@ export default function Chat() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
                 >
-                  <RecommendationBlock rec={t.rec} />
+                  <RecommendationBlock rec={t.rec} onVote={handleVote} />
                 </motion.div>
               )}
 

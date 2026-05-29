@@ -2,15 +2,15 @@
 
 import Image from "next/image";
 import { ExternalLink, Film } from "lucide-react";
-import type { MovieRec } from "@/lib/types";
+import type { MovieRec, Vote } from "@/lib/types";
+import VoteButtons from "./VoteButtons";
 
 interface Props {
   movie: MovieRec;
-  /** Optional thumbs callbacks (wired in T27) */
-  onVote?: (vote: "up" | "down") => void;
+  onVote?: (vote: Vote) => Promise<void> | void;
 }
 
-export default function MovieCard({ movie }: Props) {
+export default function MovieCard({ movie, onVote }: Props) {
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-muted/20">
       <div className="flex gap-4 p-4">
@@ -52,16 +52,21 @@ export default function MovieCard({ movie }: Props) {
             )}
           </div>
           <p className="text-sm text-muted-foreground">{movie.reason}</p>
-          {movie.trailer_url && (
-            <a
-              href={movie.trailer_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline"
-            >
-              Watch trailer <ExternalLink className="h-3 w-3" />
-            </a>
-          )}
+          <div className="mt-2 flex items-center justify-between">
+            {movie.trailer_url ? (
+              <a
+                href={movie.trailer_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline"
+              >
+                Watch trailer <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : (
+              <span />
+            )}
+            {onVote && <VoteButtons onVote={onVote} />}
+          </div>
         </div>
       </div>
     </div>
