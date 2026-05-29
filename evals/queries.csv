@@ -1,0 +1,26 @@
+query,expected_mood,acceptable_movie_genres,acceptable_music_genres
+"I just finished Interstellar, feeling reflective",reflective; cinematic,Sci-Fi|Drama,ambient|classical|post-rock
+Something fun and upbeat for a Friday night,upbeat; energetic,Comedy|Action|Adventure,pop|dance|indie
+"I love Kendrick Lamar, what should I watch?",introspective; urban,Drama|Crime|Biography,hip-hop|R&B
+"Just watched Inception, my mind is blown",cerebral; mind-bending,Sci-Fi|Thriller|Mystery,electronic|ambient|cinematic
+I want to cry,melancholic; sad,Drama|Romance,indie|singer-songwriter|sad
+Pumping iron at the gym,intense; high-energy,Action|Sports,hip-hop|electronic|rock
+Need something to fall asleep to,calm; soothing,Drama|Documentary,ambient|classical|lo-fi
+Date night with my girlfriend,romantic; warm,Romance|Drama|Comedy,soul|R&B|jazz
+I love Hans Zimmer scores,epic; cinematic,Sci-Fi|Drama|Action,orchestral|cinematic|ambient
+Halloween vibes,spooky; eerie,Horror|Thriller,dark ambient|metal|industrial
+Just got dumped,heartbroken; melancholic,Drama|Romance,indie|singer-songwriter|alternative
+I want a feel-good movie and song,uplifting; happy,Comedy|Family|Animation,pop|indie|folk
+Tarantino-style with rap,stylish; gritty,Crime|Action|Thriller,hip-hop|funk|soul
+Old-school 70s vibe,retro; groovy,Drama|Thriller|Crime,funk|rock|soul
+Studio Ghibli mood,whimsical; gentle,Animation|Fantasy|Family,folk|classical|ambient
+Just finished Breaking Bad,tense; dark,Crime|Drama|Thriller,indie|alternative|rock
+I love Beyoncé,empowering; confident,Drama|Musical|Romance,pop|R&B|soul
+Rainy Sunday afternoon,contemplative; cozy,Drama|Romance|Indie,jazz|folk|indie
+I want to feel like a badass,bold; powerful,Action|Crime|Thriller,hip-hop|rock|metal
+Mind-bending sci-fi,cerebral; futuristic,Sci-Fi|Thriller|Mystery,electronic|ambient|synth
+"Cooking dinner alone, want something light",light; pleasant,Comedy|Romance,jazz|bossa nova|indie
+I want to be inspired,inspiring; uplifting,Drama|Biography|Documentary,orchestral|indie|gospel
+Long road trip vibes,free; expansive,Adventure|Drama,rock|indie|folk
+I love A24 movies,atmospheric; indie,Drama|Horror|Thriller,indie|electronic|ambient
+Just finished La La Land,bittersweet; jazzy,Romance|Musical|Drama,jazz|musical|indie
