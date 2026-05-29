@@ -8,14 +8,20 @@ FastAPI service for the CineSound multi-agent recommendation system. Managed wit
 # install uv once (Windows)
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
+# from repo root: bring up local Postgres + pgvector
+docker compose up -d
+
 cd backend
 uv sync                          # creates .venv, installs runtime + dev deps
 Copy-Item .env.example .env      # then fill in keys
+                                 # default DATABASE_URL for the docker DB:
+                                 # postgres://cinesound:cinesound@localhost:15432/cinesound
 
+uv run python -m scripts.migrate # apply schema
 uv run uvicorn app.main:app --reload
 ```
 
-Health check: `GET http://localhost:8000/health` → `{"status":"ok","env":"dev"}`
+Health check: `GET http://localhost:8000/health` → `{"status":"ok","env":"dev","db":true}`
 
 ## Common commands
 
