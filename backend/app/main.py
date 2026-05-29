@@ -9,6 +9,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.config import settings
 from app.db import close_pool, init_pool
 from app.middleware.rate_limit import limiter
+from app.routes.feedback import router as feedback_router
 from app.routes.query import router as query_router
 
 
@@ -64,3 +65,4 @@ async def health_db() -> dict[str, str | int]:
 
 
 app.include_router(query_router)
+app.include_router(feedback_router)
