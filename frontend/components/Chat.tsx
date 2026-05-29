@@ -7,6 +7,7 @@ import { streamQuery } from "@/lib/queryClient";
 import { getOrCreateSessionId } from "@/lib/session";
 import type { Recommendation, Vote } from "@/lib/types";
 import RecommendationBlock from "./RecommendationBlock";
+import SignInButton from "./SignInButton";
 
 type Turn = {
   id: string;
@@ -95,10 +96,15 @@ export default function Chat() {
   return (
     <div className="flex h-screen flex-col">
       <header className="border-b border-border px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <h1 className="text-xl font-semibold tracking-tight">CineSound</h1>
-          <div className="text-xs text-muted-foreground">
-            {sessionId ? `device · ${sessionId.slice(0, 16)}…` : ""}
+          <div className="flex items-center gap-4">
+            {sessionId && (
+              <div className="text-xs text-muted-foreground">
+                device · {sessionId.slice(0, 16)}…
+              </div>
+            )}
+            <SignInButton />
           </div>
         </div>
       </header>
