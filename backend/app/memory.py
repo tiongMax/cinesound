@@ -71,9 +71,7 @@ async def append_to_list(
     await set_memory(pool, user_id, key, current)
 
 
-async def migrate_memory(
-    pool: asyncpg.Pool, from_user_id: str, to_user_id: str
-) -> int:
+async def migrate_memory(pool: asyncpg.Pool, from_user_id: str, to_user_id: str) -> int:
     """Move all keys from `from_user_id` to `to_user_id`.
 
     Conflicts on (to_user_id, key) keep the destination value (sign-in flow:
