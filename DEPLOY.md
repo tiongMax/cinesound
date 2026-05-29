@@ -51,3 +51,29 @@ curl https://<your-railway-url>/health
 curl https://<your-railway-url>/health/db
 # → {"status":"ok","select_1":1}
 ```
+
+---
+
+## Frontend → Vercel
+
+The frontend lives in `frontend/`. Vercel auto-detects Next.js; `frontend/vercel.json` is only there for the framework hint.
+
+### One-time setup
+
+1. **Import the repo** at https://vercel.com/new → pick `tiongMax/cinesound`.
+2. **Set the Root Directory** to `frontend` (Configure Project → Root Directory).
+3. **Environment variables** (Project → Settings → Environment Variables):
+   | Key | Value |
+   |---|---|
+   | `NEXT_PUBLIC_API_URL` | `https://<your-railway-url>` (no trailing slash) |
+   | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Google OAuth Web Client ID (Authorized origin must include the Vercel URL) |
+4. **Deploy**. Vercel returns a `.vercel.app` URL.
+5. **Go back to Railway** and add the Vercel URL to the backend's `CORS_ORIGINS` env var as a JSON list: `["https://<your-app>.vercel.app"]`. Trigger a backend redeploy.
+
+### What happens on each push to `main`
+
+- Vercel builds `next build` from the `frontend/` root, deploys to `<project>.vercel.app`, and assigns a preview URL to every non-`main` branch.
+
+### Verifying the deploy
+
+Open the Vercel URL. You should see the CineSound chat shell. Hard reload to clear any stale `session_id` cookie if testing fresh.
