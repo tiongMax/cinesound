@@ -77,3 +77,69 @@ The frontend lives in `frontend/`. Vercel auto-detects Next.js; `frontend/vercel
 ### Verifying the deploy
 
 Open the Vercel URL. You should see the CineSound chat shell. Hard reload to clear any stale `session_id` cookie if testing fresh.
+
+---
+
+## Post-deploy smoke test
+
+Once both services are up, walk through this list. Each step should pass before declaring the deploy done.
+
+### 1. Backend health
+
+```bash
+curl https://<railway>/health      # → {"status":"ok","env":"prod","db":true}
+curl https://<railway>/health/db   # → {"status":"ok","select_1":1}
+```
+
+### 2. End-to-end query (curl)
+
+```bash
+curl -N -X POST https://<railway>/query \
+  -H "Content-Type: application/json" \
+  -d '{"query":"I just finished Interstellar, feeling reflective","session_id":"smoke:1"}'
+```
+
+Expect the SSE stream to emit `event: ack` → `event: node_done` ×5 → `event: final` with a valid `Recommendation` JSON.
+
+### 3. Eval harness against prod
+
+```bash
+cd backend
+uv run python ../evals/run.py --url https://<railway> --label prod
+```
+
+Output goes to `evals/runs/<timestamp>-prod.json`. **Acceptance criteria:**
+- `aggregate.errors == 0` (every query returned a final event)
+- `aggregate.mood_match_rate >= 0.7` (mood detection is reasonable)
+- `aggregate.movie_genre_match_rate >= 0.7`
+- `aggregate.music_genre_match_rate >= 0.7`
+- `aggregate.avg_response_time_s <= 10` (PRD §13 success criterion)
+
+If any of these fail, inspect the row-level scores in the JSON before flipping the prod URL into the README.
+
+### 4. Frontend golden path
+
+In the browser at the Vercel URL:
+
+- [ ] Page loads, dark theme, header shows "CineSound" + (optionally) sign-in button
+- [ ] Type a query → status text streams ("Reading taste profile…" → "Pinning mood…" → "Searching films and tracks…" → "Picking the pairing…")
+- [ ] Final cards render: movie card with poster + trailer link, music card with album art + Spotify link, pairing note callout
+- [ ] Click thumbs-down on the movie card → button collapses to "thanks ✓"
+- [ ] Hard refresh, ask a follow-up → the previously thumbed-down genre should not dominate the new pick
+- [ ] (If `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set) Click "Sign in with Google" → succeeds → header shows your Google subject
+
+### 5. Backend logs check
+
+In Railway → Deployments → latest → Logs:
+
+- [ ] No `ERROR` lines from agent fallback (Gemini → Groq) on the smoke queries
+- [ ] No 5xx responses to `/query`
+- [ ] Rate-limit `429`s only if you intentionally hammered the endpoint
+
+### 6. Cost-cap sanity
+
+Set `DAILY_QUERY_CAP=0` temporarily in Railway, redeploy, and verify `/query` returns the "Demo limit reached" stub immediately. Reset to your real cap.
+
+### 7. README and portfolio link
+
+When all the above pass, update the project README with the live Vercel URL and link to the latest `evals/runs/<timestamp>-prod.json` as the "how we know it works" artifact for portfolio reviewers.
