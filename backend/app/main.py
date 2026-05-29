@@ -9,6 +9,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.config import settings
 from app.db import close_pool, init_pool
 from app.middleware.rate_limit import limiter
+from app.routes.query import router as query_router
 
 
 @asynccontextmanager
@@ -60,3 +61,6 @@ async def health_db() -> dict[str, str | int]:
     async with pool.acquire() as conn:
         result = await conn.fetchval("SELECT 1")
     return {"status": "ok", "select_1": result}
+
+
+app.include_router(query_router)
