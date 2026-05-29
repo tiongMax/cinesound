@@ -11,7 +11,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 # ---------- Final output (PRD §8) ----------
 
 
@@ -123,9 +122,9 @@ class SignInRequest(BaseModel):
 
 
 class MemoryKey:
-    WATCHED_MOVIES = "watched_movies"        # list[int]   tmdb_ids
-    HEARD_TRACKS = "heard_tracks"            # list[str]   spotify_uris
-    LIKED_GENRES = "liked_genres"            # list[str]
-    DISLIKED_GENRES = "disliked_genres"      # list[str]
-    PAST_MOODS = "past_moods"                # list[str]
-    CONTENT_PREFS = "content_prefs"          # dict[str, bool]  e.g. {"no_horror": true}
+    WATCHED_MOVIES = "watched_movies"  # list[int]   tmdb_ids
+    HEARD_TRACKS = "heard_tracks"  # list[str]   spotify_uris
+    LIKED_GENRES = "liked_genres"  # list[str]
+    DISLIKED_GENRES = "disliked_genres"  # list[str]
+    PAST_MOODS = "past_moods"  # list[str]
+    CONTENT_PREFS = "content_prefs"  # dict[str, bool]  e.g. {"no_horror": true}

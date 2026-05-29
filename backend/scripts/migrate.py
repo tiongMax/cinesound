@@ -43,9 +43,7 @@ async def apply_migration(conn: asyncpg.Connection, path: Path) -> None:
     sql = path.read_text(encoding="utf-8")
     async with conn.transaction():
         await conn.execute(sql)
-        await conn.execute(
-            "INSERT INTO _migrations (filename) VALUES ($1)", path.name
-        )
+        await conn.execute("INSERT INTO _migrations (filename) VALUES ($1)", path.name)
 
 
 async def main() -> int:
@@ -71,7 +69,7 @@ async def main() -> int:
         for p in pending:
             print(f"Applying {p.name} ...")
             await apply_migration(conn, p)
-            print(f"  done.")
+            print("  done.")
 
         print(f"Applied {len(pending)} migration(s).")
         return 0

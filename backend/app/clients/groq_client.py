@@ -56,10 +56,7 @@ async def groq_chat(
     messages.append(
         {
             "role": "user",
-            "content": (
-                f"{prompt}\n\n"
-                f"Return JSON matching this schema:\n{schema_hint}"
-            ),
+            "content": (f"{prompt}\n\nReturn JSON matching this schema:\n{schema_hint}"),
         }
     )
     resp = await client.chat.completions.create(

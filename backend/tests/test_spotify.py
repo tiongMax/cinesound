@@ -15,9 +15,7 @@ def client():
 
 def _mock_token():
     respx.post(SPOTIFY_AUTH_URL).mock(
-        return_value=httpx.Response(
-            200, json={"access_token": "fake", "expires_in": 3600}
-        )
+        return_value=httpx.Response(200, json={"access_token": "fake", "expires_in": 3600})
     )
 
 
@@ -49,10 +47,7 @@ async def test_related_artists_returns_empty_on_404(client: SpotifyClient):
 
 
 def test_track_url_helper():
-    assert (
-        SpotifyClient.track_url("spotify:track:abc")
-        == "https://open.spotify.com/track/abc"
-    )
+    assert SpotifyClient.track_url("spotify:track:abc") == "https://open.spotify.com/track/abc"
 
 
 def test_album_art_url_helper():
