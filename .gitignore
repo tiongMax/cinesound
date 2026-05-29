@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+.next/
+out/
+build/
+*.log
+.npm/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Eval runs
+evals/runs/
+
+# Seed cache
+backend/scripts/.vibe_cache.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
