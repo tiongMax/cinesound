@@ -50,6 +50,53 @@ async def get_movie_details(tmdb_id: int) -> dict[str, Any]:
     }
 
 
+async def search_movies_by_title(title: str, *, limit: int = 3) -> dict[str, Any]:
+    """Confirm a title the user mentioned exists in TMDB and pull its real genres + year.
+
+    Used by the Profiler to ground the movie profile when the user references a
+    specific title (e.g. "I just finished Interstellar") instead of hallucinating
+    the metadata.
+    """
+    async with TMDBClient() as tmdb:
+        results = await tmdb.search_movie(title)
+    return {
+        "query": title,
+        "matches": [
+            {
+                "tmdb_id": r.get("id"),
+                "title": r.get("title"),
+                "year": (r.get("release_date") or "")[:4] or None,
+                "overview": (r.get("overview") or "")[:200],
+                "genre_ids": r.get("genre_ids", []),
+                "vote_average": r.get("vote_average"),
+            }
+            for r in results[:limit]
+        ],
+    }
+
+
+async def search_artists(name: str, *, limit: int = 3) -> dict[str, Any]:
+    """Disambiguate an artist the user mentioned and pull their Spotify genre tags.
+
+    Used by the Profiler when the user references an artist (e.g. "I love Kendrick")
+    so the music profile is grounded in that artist's actual catalogue tags.
+    """
+    async with SpotifyClient() as spotify:
+        artists = await spotify.search_artist(name, limit=limit)
+    return {
+        "query": name,
+        "matches": [
+            {
+                "id": a.get("id"),
+                "name": a.get("name"),
+                "genres": a.get("genres", []),
+                "popularity": a.get("popularity"),
+            }
+            for a in artists
+        ],
+    }
+
+
 async def get_artist_top_tracks(artist_name: str, *, limit: int = 5) -> dict[str, Any]:
     """Look up an artist's top tracks — useful when the user mentions a reference artist."""
     async with SpotifyClient() as spotify:
@@ -120,3 +167,49 @@ GET_ARTIST_TOP_TRACKS = ToolSpec(
 
 
 RANKER_TOOLS: list[ToolSpec] = [GET_MOVIE_DETAILS, GET_ARTIST_TOP_TRACKS]
+
+
+SEARCH_MOVIES_BY_TITLE = ToolSpec(
+    name="search_movies_by_title",
+    description=(
+        "Look up movies on TMDB by title. Use this ONLY when the user mentions a "
+        "specific movie or show title in their query — never for vague mood queries. "
+        "Returns top candidates with their real genres and overview so you can ground "
+        "the movie profile in catalogue data instead of guessing."
+    ),
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "title": types.Schema(
+                type=types.Type.STRING,
+                description="Movie or show title the user referenced",
+            ),
+        },
+        required=["title"],
+    ),
+    handler=search_movies_by_title,
+)
+
+
+SEARCH_ARTISTS = ToolSpec(
+    name="search_artists",
+    description=(
+        "Look up artists on Spotify by name. Use this ONLY when the user mentions a "
+        "specific artist or band by name — never for vague mood queries. Returns top "
+        "matches with their Spotify genre tags so you can ground the music profile."
+    ),
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "name": types.Schema(
+                type=types.Type.STRING,
+                description="Artist or band name the user referenced",
+            ),
+        },
+        required=["name"],
+    ),
+    handler=search_artists,
+)
+
+
+PROFILER_TOOLS: list[ToolSpec] = [SEARCH_MOVIES_BY_TITLE, SEARCH_ARTISTS]

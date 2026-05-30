@@ -14,7 +14,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.clients.gemini import gemini_chat
+from app.agents.tools import PROFILER_TOOLS
+from app.clients.gemini import gemini_chat_with_tools
 from app.schemas import TasteProfile
 
 PROFILER_SYSTEM = """You are CineSound's taste profiler. Given a user query about how they're
@@ -51,7 +52,17 @@ User: "I love Kendrick Lamar, what should I watch?"
   "movie_profile": {"themes": ["urban", "introspective", "social"], "genres": ["Drama", "Crime", "Biography"], "mood": "introspective, urban"},
   "music_profile": {"energy": "mellow", "genres": ["hip-hop", "R&B"], "mood": "introspective, lyrical"},
   "shared_mood": "introspective, urban"
-}"""
+}
+
+You have two optional tools:
+ - search_movies_by_title(title) — use ONLY when the user references a specific
+   movie or show title. Returns real genres + overview so you can ground the
+   movie profile in catalogue data instead of guessing.
+ - search_artists(name) — use ONLY when the user references a specific artist
+   or band by name. Returns real Spotify genre tags.
+
+Skip both tools entirely for vague mood queries ("I want to cry", "Friday night
+energy"). The cost ceiling for this step is 2 tool calls per query."""
 
 
 def _memory_snippet(memory: dict[str, Any]) -> str:
@@ -73,14 +84,19 @@ def _memory_snippet(memory: dict[str, Any]) -> str:
 
 
 async def profile(query: str, memory: dict[str, Any] | None = None) -> TasteProfile:
-    """Run the Joint Profiler. Returns a validated TasteProfile."""
+    """Run the Joint Profiler. Returns a validated TasteProfile.
+
+    May invoke search_movies_by_title / search_artists tools when the query
+    references specific titles or artists — bounded by the profiler tool cap.
+    """
     prompt = f"User query: {query}"
     if memory:
         snippet = _memory_snippet(memory)
         if snippet:
             prompt = f"{prompt}\n\nUser memory:\n{snippet}"
-    return await gemini_chat(
+    return await gemini_chat_with_tools(
         prompt,
+        tools=PROFILER_TOOLS,
         response_schema=TasteProfile,
         system=PROFILER_SYSTEM,
         temperature=0.5,

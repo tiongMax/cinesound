@@ -1,4 +1,4 @@
-"""Joint Profiler tests — gemini_chat is mocked."""
+"""Joint Profiler tests — gemini_chat_with_tools is mocked."""
 
 from unittest.mock import AsyncMock
 
@@ -40,7 +40,7 @@ def test_memory_snippet_handles_empty():
 
 async def test_profile_invokes_gemini_chat_with_schema(monkeypatch):
     mock = AsyncMock(return_value=_stub_profile())
-    monkeypatch.setattr(profiler, "gemini_chat", mock)
+    monkeypatch.setattr(profiler, "gemini_chat_with_tools", mock)
 
     result = await profile("I just finished Interstellar")
 
@@ -53,7 +53,7 @@ async def test_profile_invokes_gemini_chat_with_schema(monkeypatch):
 
 async def test_profile_appends_memory_snippet(monkeypatch):
     mock = AsyncMock(return_value=_stub_profile())
-    monkeypatch.setattr(profiler, "gemini_chat", mock)
+    monkeypatch.setattr(profiler, "gemini_chat_with_tools", mock)
 
     await profile("upbeat plz", memory={"disliked_genres": ["Horror"]})
 
@@ -64,7 +64,7 @@ async def test_profile_appends_memory_snippet(monkeypatch):
 
 async def test_profile_without_memory_omits_section(monkeypatch):
     mock = AsyncMock(return_value=_stub_profile())
-    monkeypatch.setattr(profiler, "gemini_chat", mock)
+    monkeypatch.setattr(profiler, "gemini_chat_with_tools", mock)
 
     await profile("upbeat plz")
 

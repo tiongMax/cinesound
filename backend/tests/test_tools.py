@@ -6,9 +6,14 @@ from app.agents import tools as tools_mod
 from app.agents.tools import (
     GET_ARTIST_TOP_TRACKS,
     GET_MOVIE_DETAILS,
+    PROFILER_TOOLS,
     RANKER_TOOLS,
+    SEARCH_ARTISTS,
+    SEARCH_MOVIES_BY_TITLE,
     get_artist_top_tracks,
     get_movie_details,
+    search_artists,
+    search_movies_by_title,
 )
 
 # ---------- get_movie_details ----------
@@ -96,3 +101,76 @@ def test_movie_details_declaration_requires_tmdb_id():
 
 def test_artist_tracks_declaration_requires_artist_name():
     assert "artist_name" in GET_ARTIST_TOP_TRACKS.parameters.required
+
+
+# ---------- search_movies_by_title (profiler tool) ----------
+
+
+async def test_search_movies_by_title_returns_top_matches(monkeypatch):
+    fake = AsyncMock()
+    fake.__aenter__ = AsyncMock(return_value=fake)
+    fake.__aexit__ = AsyncMock(return_value=None)
+    fake.search_movie = AsyncMock(
+        return_value=[
+            {
+                "id": 157336,
+                "title": "Interstellar",
+                "release_date": "2014-11-05",
+                "overview": "The adventures of a group of explorers...",
+                "genre_ids": [12, 18, 878],
+                "vote_average": 8.4,
+            },
+            {"id": 99, "title": "Interstellar Wars", "release_date": "2001-01-01"},
+        ]
+    )
+    monkeypatch.setattr(tools_mod, "TMDBClient", lambda: fake)
+
+    out = await search_movies_by_title("Interstellar")
+
+    assert out["query"] == "Interstellar"
+    assert len(out["matches"]) == 2
+    assert out["matches"][0]["title"] == "Interstellar"
+    assert out["matches"][0]["year"] == "2014"
+    assert 878 in out["matches"][0]["genre_ids"]
+
+
+# ---------- search_artists (profiler tool) ----------
+
+
+async def test_search_artists_returns_top_matches(monkeypatch):
+    fake = AsyncMock()
+    fake.__aenter__ = AsyncMock(return_value=fake)
+    fake.__aexit__ = AsyncMock(return_value=None)
+    fake.search_artist = AsyncMock(
+        return_value=[
+            {
+                "id": "kl1",
+                "name": "Kendrick Lamar",
+                "genres": ["west coast hip hop", "conscious hip hop"],
+                "popularity": 90,
+            }
+        ]
+    )
+    monkeypatch.setattr(tools_mod, "SpotifyClient", lambda: fake)
+
+    out = await search_artists("Kendrick")
+
+    assert out["query"] == "Kendrick"
+    assert out["matches"][0]["name"] == "Kendrick Lamar"
+    assert "west coast hip hop" in out["matches"][0]["genres"]
+
+
+# ---------- profiler tool declarations ----------
+
+
+def test_profiler_tools_registered():
+    names = {t.name for t in PROFILER_TOOLS}
+    assert names == {"search_movies_by_title", "search_artists"}
+
+
+def test_search_movies_declaration_requires_title():
+    assert "title" in SEARCH_MOVIES_BY_TITLE.parameters.required
+
+
+def test_search_artists_declaration_requires_name():
+    assert "name" in SEARCH_ARTISTS.parameters.required

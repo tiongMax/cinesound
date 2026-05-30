@@ -20,7 +20,7 @@ A typical query takes 3 LLM calls, hard-capped, and returns in <10s on a warm ba
 
 - **Joint Taste Profiler** — one Gemini call extracts a movie profile *and* a music profile *and* a shared mood, instead of running two independent agents. Cheaper, more coherent recommendations.
 - **Deterministic ranker + LLM pairer** — cosine similarity over pgvector ranks candidates; the LLM only handles the pairing prose. Keeps cost predictable and dedupe trivial.
-- **LLM tool calling at the ranker** — the model gets `get_movie_details(tmdb_id)` and `get_artist_top_tracks(artist_name)` and decides when to deep-dive a candidate or ground a music pick against a referenced artist. Bounded to 2 tool iterations per query so cost stays predictable.
+- **LLM tool calling on both LLM-touching agents** — the **Profiler** gets `search_movies_by_title(title)` + `search_artists(name)` to ground itself against real TMDB/Spotify catalogue data when the user references specific titles or artists (instead of hallucinating genres); the **Ranker** gets `get_movie_details(tmdb_id)` + `get_artist_top_tracks(artist_name)` to deep-dive top candidates before picking the final pair. Each agent is capped at 2 tool iterations to keep cost predictable.
 - **Committed eval harness** — 25 hand-curated queries scored on mood-match, genre overlap, and (human-graded) pairing quality. Every run lands in `evals/runs/<date>.json` — see [`evals/`](evals/).
 - **Graceful fallback** — Gemini errors at the profile or rank step fall back to Groq Llama 70B with the same Pydantic schema, transparent to the caller.
 
