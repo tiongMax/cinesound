@@ -107,9 +107,8 @@ async def _rank_and_pair_node(state: GraphState) -> dict[str, Any]:
         if not movies or not music:
             rec = Recommendation(
                 mood_detected=state["profile"].shared_mood,
-                movies=[],
-                music=[],
-                pairing_note="Couldn't find a fresh pairing this time — try a different mood.",
+                pairings=[],
+                fallback_message="Couldn't find a fresh pairing this time — try a different mood.",
             )
         else:
             rec = await groq_chat(
@@ -139,10 +138,9 @@ async def _save_memory_node(state: GraphState) -> dict[str, Any]:
             new_moods = (moods + [prof.shared_mood])[-PAST_MOODS_MAX:]
             await set_memory(pool, sid, MemoryKey.PAST_MOODS, new_moods)
 
-    for m in rec.movies:
-        await append_to_list(pool, sid, MemoryKey.WATCHED_MOVIES, m.tmdb_id)
-    for t in rec.music:
-        await append_to_list(pool, sid, MemoryKey.HEARD_TRACKS, t.spotify_uri)
+    for p in rec.pairings:
+        await append_to_list(pool, sid, MemoryKey.WATCHED_MOVIES, p.movie.tmdb_id)
+        await append_to_list(pool, sid, MemoryKey.HEARD_TRACKS, p.music.spotify_uri)
 
     return {}
 

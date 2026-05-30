@@ -87,10 +87,19 @@ async def consume_query(
 
 
 def score_row(row: dict, rec: dict) -> dict:
-    """Score a single row against the model's recommendation."""
-    movie_genres = [g for m in rec.get("movies", []) for g in m.get("genres", [])]
-    music_genres = [t.get("mood_tag", "") for t in rec.get("music", [])]
-    # also include any tags that appear in the mood_tag field
+    """Score a single row against the model's recommendation.
+
+    Accuracy is measured at the recommendation level (any of the pairings
+    must hit the threshold), not per-pairing — we judge the *response*, not
+    each individual pick.
+    """
+    pairings = rec.get("pairings", []) or []
+    movie_genres = [
+        g for p in pairings for g in (p.get("movie", {}).get("genres") or [])
+    ]
+    music_genres = [
+        p.get("music", {}).get("mood_tag", "") for p in pairings if p.get("music")
+    ]
     return {
         "mood_match": score_mood_match(rec.get("mood_detected", ""), row["expected_mood"]),
         "movie_genre_match": score_genre_overlap(movie_genres, row["acceptable_movie_genres"]),
@@ -100,16 +109,21 @@ def score_row(row: dict, rec: dict) -> dict:
 
 
 def summarise_rec(rec: dict) -> dict:
-    movie = rec.get("movies", [{}])[0] if rec.get("movies") else {}
-    track = rec.get("music", [{}])[0] if rec.get("music") else {}
+    pairings = rec.get("pairings", []) or []
     return {
         "mood_detected": rec.get("mood_detected"),
-        "movie_title": movie.get("title"),
-        "movie_genres": movie.get("genres", []),
-        "music_track": track.get("track"),
-        "music_artist": track.get("artist"),
-        "music_mood_tag": track.get("mood_tag"),
-        "pairing_note": rec.get("pairing_note"),
+        "fallback_message": rec.get("fallback_message"),
+        "pairings": [
+            {
+                "movie_title": p.get("movie", {}).get("title"),
+                "movie_genres": p.get("movie", {}).get("genres", []),
+                "music_track": p.get("music", {}).get("track"),
+                "music_artist": p.get("music", {}).get("artist"),
+                "music_mood_tag": p.get("music", {}).get("mood_tag"),
+                "pairing_note": p.get("pairing_note"),
+            }
+            for p in pairings
+        ],
     }
 
 

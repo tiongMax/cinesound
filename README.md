@@ -29,25 +29,31 @@ A typical query takes 3 LLM calls, hard-capped, and returns in <10s on a warm ba
 ```json
 {
   "mood_detected": "reflective, emotional, cinematic",
-  "movies": [{
-    "tmdb_id": 329865,
-    "title": "Arrival",
-    "year": 2016,
-    "genres": ["Sci-Fi", "Drama"],
-    "reason": "Same emotional sci-fi depth as Interstellar",
-    "trailer_url": "https://youtube.com/..."
-  }],
-  "music": [{
-    "spotify_uri": "spotify:track:...",
-    "track": "Day One",
-    "artist": "Hans Zimmer",
-    "mood_tag": "cinematic ambient",
-    "reason": "Matches your reflective mood",
-    "spotify_url": "https://open.spotify.com/..."
-  }],
-  "pairing_note": "Listen to Hans Zimmer while watching Arrival for the full effect."
+  "pairings": [
+    {
+      "movie": {
+        "tmdb_id": 329865,
+        "title": "Arrival",
+        "year": 2016,
+        "genres": ["Sci-Fi", "Drama"],
+        "reason": "Same emotional sci-fi depth as Interstellar",
+        "trailer_url": "https://youtube.com/..."
+      },
+      "music": {
+        "spotify_uri": "spotify:track:...",
+        "track": "Day One",
+        "artist": "Hans Zimmer",
+        "mood_tag": "cinematic ambient",
+        "reason": "Matches your reflective mood",
+        "spotify_url": "https://open.spotify.com/..."
+      },
+      "pairing_note": "Listen to Hans Zimmer while watching Arrival for the full effect."
+    }
+  ]
 }
 ```
+
+The ranker returns up to **3 distinct pairings** per query — different points along the shared mood (classic / left-field / palette-cleansing).
 
 ## Architecture
 

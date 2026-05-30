@@ -9,13 +9,14 @@ from unittest.mock import AsyncMock
 from app.agents import graph as graph_mod
 from app.agents.graph import run
 from app.clients.gemini import GeminiError
-from app.schemas import (
+from app.schemas import (  # noqa: I001
     MovieCandidate,
     MovieProfile,
     MovieRec,
     MusicCandidate,
     MusicProfile,
     MusicRec,
+    Pairing,
     Recommendation,
     TasteProfile,
 )
@@ -32,28 +33,28 @@ def _profile() -> TasteProfile:
 def _rec() -> Recommendation:
     return Recommendation(
         mood_detected="reflective, cinematic",
-        movies=[
-            MovieRec(
-                tmdb_id=329865,
-                title="Arrival",
-                year=2016,
-                rating=7.9,
-                genres=["Sci-Fi", "Drama"],
-                reason="reflective sci-fi",
+        pairings=[
+            Pairing(
+                movie=MovieRec(
+                    tmdb_id=329865,
+                    title="Arrival",
+                    year=2016,
+                    rating=7.9,
+                    genres=["Sci-Fi", "Drama"],
+                    reason="reflective sci-fi",
+                ),
+                music=MusicRec(
+                    spotify_uri="spotify:track:abc",
+                    track="Day One",
+                    artist="Hans Zimmer",
+                    album="Interstellar OST",
+                    mood_tag="cinematic ambient",
+                    reason="matches mood",
+                    spotify_url="https://open.spotify.com/track/abc",
+                ),
+                pairing_note="Listen to Hans Zimmer while watching Arrival.",
             )
         ],
-        music=[
-            MusicRec(
-                spotify_uri="spotify:track:abc",
-                track="Day One",
-                artist="Hans Zimmer",
-                album="Interstellar OST",
-                mood_tag="cinematic ambient",
-                reason="matches mood",
-                spotify_url="https://open.spotify.com/track/abc",
-            )
-        ],
-        pairing_note="Listen to Hans Zimmer while watching Arrival.",
     )
 
 
@@ -122,7 +123,7 @@ async def test_run_end_to_end_happy_path(monkeypatch):
     result = await run(pool, "I just finished Interstellar", "session:abc")
 
     assert isinstance(result, Recommendation)
-    assert result.pairing_note.startswith("Listen to Hans Zimmer")
+    assert result.pairings[0].pairing_note.startswith("Listen to Hans Zimmer")
     profile_fn.assert_awaited_once()
     rec_fn.assert_awaited_once()
     # both LLM nodes incremented usage
@@ -143,7 +144,7 @@ async def test_profile_falls_back_to_groq_on_gemini_error(monkeypatch):
     pool = _fake_pool()
 
     result = await run(pool, "anything", "session:abc")
-    assert result.movies[0].tmdb_id == 329865
+    assert result.pairings[0].movie.tmdb_id == 329865
     graph_mod.groq_chat.assert_awaited_once()
 
 
@@ -156,5 +157,5 @@ async def test_rank_falls_back_to_groq_on_gemini_error(monkeypatch):
     pool = _fake_pool()
 
     result = await run(pool, "anything", "session:abc")
-    assert result.pairing_note.startswith("Listen to Hans Zimmer")
+    assert result.pairings[0].pairing_note.startswith("Listen to Hans Zimmer")
     graph_mod.groq_chat.assert_awaited_once()

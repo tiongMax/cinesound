@@ -16,6 +16,7 @@ from app.schemas import (
     MovieRec,
     MusicProfile,
     MusicRec,
+    Pairing,
     Recommendation,
     TasteProfile,
 )
@@ -24,28 +25,28 @@ from app.schemas import (
 def _rec() -> Recommendation:
     return Recommendation(
         mood_detected="reflective, cinematic",
-        movies=[
-            MovieRec(
-                tmdb_id=329865,
-                title="Arrival",
-                year=2016,
-                rating=7.9,
-                genres=["Sci-Fi", "Drama"],
-                reason="reflective sci-fi",
+        pairings=[
+            Pairing(
+                movie=MovieRec(
+                    tmdb_id=329865,
+                    title="Arrival",
+                    year=2016,
+                    rating=7.9,
+                    genres=["Sci-Fi", "Drama"],
+                    reason="reflective sci-fi",
+                ),
+                music=MusicRec(
+                    spotify_uri="spotify:track:abc",
+                    track="Day One",
+                    artist="Hans Zimmer",
+                    album="Interstellar OST",
+                    mood_tag="cinematic ambient",
+                    reason="matches mood",
+                    spotify_url="https://open.spotify.com/track/abc",
+                ),
+                pairing_note="Listen while you watch.",
             )
         ],
-        music=[
-            MusicRec(
-                spotify_uri="spotify:track:abc",
-                track="Day One",
-                artist="Hans Zimmer",
-                album="Interstellar OST",
-                mood_tag="cinematic ambient",
-                reason="matches mood",
-                spotify_url="https://open.spotify.com/track/abc",
-            )
-        ],
-        pairing_note="Listen while you watch.",
     )
 
 
@@ -116,8 +117,8 @@ def test_query_streams_milestones_then_final(client, patched_orchestrator, monke
     assert names[-1] == "final"
 
     final_data = events[-1][1]
-    assert final_data["movies"][0]["tmdb_id"] == 329865
-    assert final_data["pairing_note"].startswith("Listen")
+    assert final_data["pairings"][0]["movie"]["tmdb_id"] == 329865
+    assert final_data["pairings"][0]["pairing_note"].startswith("Listen")
 
 
 def test_query_returns_stub_when_over_daily_cap(client, patched_orchestrator):
@@ -136,7 +137,7 @@ def test_query_returns_stub_when_over_daily_cap(client, patched_orchestrator):
     names = [e[0] for e in events]
     assert names == ["ack", "final"]  # no node_done — orchestrator skipped
     final = events[-1][1]
-    assert "Demo limit reached" in final["pairing_note"]
+    assert "Demo limit reached" in final["fallback_message"]
 
 
 def test_query_validates_body(client):

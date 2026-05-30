@@ -14,9 +14,8 @@ from app.usage import is_over_daily_cap
 
 CAP_REACHED_REC = Recommendation(
     mood_detected="(daily limit reached)",
-    movies=[],
-    music=[],
-    pairing_note=(
+    pairings=[],
+    fallback_message=(
         "Demo limit reached for today — CineSound is rate-limited to keep "
         "costs under control. Try again tomorrow."
     ),

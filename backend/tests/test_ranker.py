@@ -11,6 +11,7 @@ from app.schemas import (
     MusicCandidate,
     MusicProfile,
     MusicRec,
+    Pairing,
     Recommendation,
     TasteProfile,
 )
@@ -43,28 +44,28 @@ def _music(uri: str, score: float, track: str = "Track") -> MusicCandidate:
 def _stub_rec() -> Recommendation:
     return Recommendation(
         mood_detected="reflective, cinematic",
-        movies=[
-            MovieRec(
-                tmdb_id=329865,
-                title="Arrival",
-                year=2016,
-                rating=7.9,
-                genres=["Sci-Fi", "Drama"],
-                reason="Same reflective sci-fi depth",
+        pairings=[
+            Pairing(
+                movie=MovieRec(
+                    tmdb_id=329865,
+                    title="Arrival",
+                    year=2016,
+                    rating=7.9,
+                    genres=["Sci-Fi", "Drama"],
+                    reason="Same reflective sci-fi depth",
+                ),
+                music=MusicRec(
+                    spotify_uri="spotify:track:abc",
+                    track="Day One",
+                    artist="Hans Zimmer",
+                    album="Interstellar OST",
+                    mood_tag="cinematic ambient",
+                    reason="Matches the reflective mood",
+                    spotify_url="https://open.spotify.com/track/abc",
+                ),
+                pairing_note="Listen while you watch for full effect.",
             )
         ],
-        music=[
-            MusicRec(
-                spotify_uri="spotify:track:abc",
-                track="Day One",
-                artist="Hans Zimmer",
-                album="Interstellar OST",
-                mood_tag="cinematic ambient",
-                reason="Matches the reflective mood",
-                spotify_url="https://open.spotify.com/track/abc",
-            )
-        ],
-        pairing_note="Listen while you watch for full effect.",
     )
 
 
@@ -115,9 +116,9 @@ async def test_rank_and_pair_returns_empty_pairing_when_all_filtered(monkeypatch
 
     rec = await rank_and_pair(_profile(), movies, music, memory=memory)
 
-    assert rec.movies == []
-    assert rec.music == []
-    assert "fresh" in rec.pairing_note.lower() or "different" in rec.pairing_note.lower()
+    assert rec.pairings == []
+    msg = (rec.fallback_message or "").lower()
+    assert "fresh" in msg or "different" in msg
     mock.assert_not_awaited()
 
 
@@ -130,7 +131,7 @@ async def test_rank_and_pair_calls_gemini_with_top_candidates(monkeypatch):
 
     rec = await rank_and_pair(_profile(), movies, music)
 
-    assert rec.pairing_note == "Listen while you watch for full effect."
+    assert rec.pairings[0].pairing_note == "Listen while you watch for full effect."
     mock.assert_awaited_once()
     prompt = mock.await_args.args[0]
     # Top 5 movies (by score) should appear; bottom 5 should not

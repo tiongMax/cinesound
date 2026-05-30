@@ -23,11 +23,16 @@ export interface MusicRec {
   album_art_url?: string | null;
 }
 
+export interface Pairing {
+  movie: MovieRec;
+  music: MusicRec;
+  pairing_note: string;
+}
+
 export interface Recommendation {
   mood_detected: string;
-  movies: MovieRec[];
-  music: MusicRec[];
-  pairing_note: string;
+  pairings: Pairing[];
+  fallback_message?: string | null;
 }
 
 export type SseEvent =

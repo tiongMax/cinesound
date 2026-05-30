@@ -16,28 +16,34 @@ from app.clients.gemini import gemini_chat_with_tools
 from app.schemas import MovieCandidate, MusicCandidate, Recommendation, TasteProfile
 
 TOP_N_PER_DOMAIN = 5
+TARGET_PAIRINGS = 3
 
 RANKER_SYSTEM = """You are CineSound's pairing curator. You receive a user's
 shared mood plus a shortlist of movie and music candidates that have already
 been pre-filtered for taste. Your job:
 
-1. Pick exactly ONE movie and ONE track from the lists that best fit the shared mood.
-2. Write a one-sentence `reason` for each pick explaining WHY it matches the mood.
-3. Write a `pairing_note` (1-2 sentences) explaining why the movie + track
-   complement each other for the user's mood. The pairing note is the magic
-   moment of the product — be specific, evocative, no clichés.
-4. Set `mood_detected` to the shared mood verbatim.
+1. Build **exactly 3 distinct pairings**, each one movie + one track + a
+   per-pairing note. The 3 pairings should sit at different points along the
+   shared mood — e.g. classic / left-field / palette-cleansing — not three
+   variations of the same pick.
+2. Within each pairing:
+   - `reason` on the movie: one sentence on WHY this movie fits the mood.
+   - `reason` on the music: one sentence on WHY this track fits the mood.
+   - `pairing_note` on the pairing: 1-2 sentences on WHY the movie + track
+     complement each other. Be specific and evocative; no clichés.
+3. Set `mood_detected` to the shared mood verbatim.
+4. Do not reuse the same movie or track across pairings.
 
 You have two optional tools available:
  - `get_movie_details(tmdb_id)` — pulls a richer overview / tagline / runtime for a
-   specific candidate. Use this sparingly (max 1-2 calls) when the short overview
-   isn't enough to choose between top candidates.
- - `get_artist_top_tracks(artist_name)` — when the user named a reference artist in
-   their query, use this to ground your music pick against that artist's catalogue.
+   specific candidate. Use sparingly (max 1-2 calls) on the candidates you're most
+   likely to pick.
+ - `get_artist_top_tracks(artist_name)` — when the user named a reference artist
+   in their query, use this to ground a music pick against that artist's catalogue.
 
-Skip the tools entirely if the choice is already obvious. Use the candidate
+Skip the tools entirely if the choices are already obvious. Use the candidate
 metadata as-is for tmdb_id, spotify_uri, title, year, etc. Do not invent fields.
-Output a single Recommendation JSON object."""
+Output a single Recommendation JSON object with a `pairings` array of length 3."""
 
 
 def filter_seen(
@@ -88,7 +94,7 @@ def _build_prompt(
         f"Music mood: {profile.music_profile.mood}\n\n"
         f"Movie candidates:\n" + "\n".join(movie_lines) + "\n\n"
         "Music candidates:\n" + "\n".join(music_lines) + "\n\n"
-        "Pick one movie + one track and write the pairing."
+        f"Build {TARGET_PAIRINGS} distinct pairings."
     )
 
 
@@ -108,14 +114,12 @@ async def rank_and_pair(
     movies, music = top_n(movies, music)
 
     if not movies or not music:
-        # No candidates left after filtering — return a graceful empty pairing
         return Recommendation(
             mood_detected=profile.shared_mood,
-            movies=[],
-            music=[],
-            pairing_note=(
-                "Couldn't find a fresh pairing this time — try a slightly different mood, "
-                "or clear some of your watch history."
+            pairings=[],
+            fallback_message=(
+                "Couldn't find a fresh pairing this time — try a slightly different "
+                "mood, or clear some of your watch history."
             ),
         )
 

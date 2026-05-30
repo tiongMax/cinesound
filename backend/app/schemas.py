@@ -36,13 +36,25 @@ class MusicRec(BaseModel):
     album_art_url: str | None = None
 
 
+class Pairing(BaseModel):
+    """A single movie + music pairing with its rationale."""
+
+    movie: MovieRec
+    music: MusicRec
+    pairing_note: str
+
+
 class Recommendation(BaseModel):
-    """Final response shape returned to the client."""
+    """Final response shape returned to the client.
+
+    Holds up to N pairings (typically 3). When `pairings` is empty
+    (daily cap reached, no candidates left after filtering, etc.),
+    the UI shows `fallback_message` instead.
+    """
 
     mood_detected: str
-    movies: list[MovieRec]
-    music: list[MusicRec]
-    pairing_note: str
+    pairings: list[Pairing] = Field(default_factory=list)
+    fallback_message: str | None = None
 
 
 # ---------- Taste profile (Joint Profiler output, T15) ----------
