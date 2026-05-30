@@ -1,11 +1,14 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { ListMusic } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { postFeedback } from "@/lib/feedback";
+import { buildPlaylist } from "@/lib/playlist";
 import { streamQuery } from "@/lib/queryClient";
 import { getOrCreateSessionId } from "@/lib/session";
-import type { Recommendation, Vote } from "@/lib/types";
+import type { Playlist, Recommendation, Vote } from "@/lib/types";
+import PlaylistBlock from "./PlaylistBlock";
 import RecommendationBlock from "./RecommendationBlock";
 import SignInButton from "./SignInButton";
 import TasteProfilePanel from "./TasteProfilePanel";
@@ -16,6 +19,9 @@ type Turn = {
   status: "thinking" | "profiling" | "searching" | "ranking" | "final" | "error";
   rec?: Recommendation;
   error?: string;
+  playlist?: Playlist;
+  playlistLoading?: boolean;
+  playlistError?: string;
 };
 
 const NODE_LABEL: Record<string, Turn["status"]> = {
@@ -60,6 +66,23 @@ export default function Chat() {
       if (!sessionId) return;
       await postFeedback({ session_id: sessionId, vote, ...target });
       setProfileTick((n) => n + 1);
+    },
+    [sessionId],
+  );
+
+  const handleMakePlaylist = useCallback(
+    async (turnId: string, query: string) => {
+      if (!sessionId) return;
+      updateTurn(turnId, { playlistLoading: true, playlistError: undefined });
+      try {
+        const pl = await buildPlaylist(query, sessionId, 5);
+        updateTurn(turnId, { playlist: pl, playlistLoading: false });
+      } catch (e) {
+        updateTurn(turnId, {
+          playlistLoading: false,
+          playlistError: e instanceof Error ? e.message : "failed",
+        });
+      }
     },
     [sessionId],
   );
@@ -151,8 +174,29 @@ export default function Chat() {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
+                  className="space-y-3"
                 >
                   <RecommendationBlock rec={t.rec} onVote={handleVote} />
+
+                  {t.rec.pairings.length > 0 && !t.playlist && (
+                    <button
+                      type="button"
+                      onClick={() => handleMakePlaylist(t.id, t.query)}
+                      disabled={t.playlistLoading}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+                    >
+                      <ListMusic className="h-3.5 w-3.5" />
+                      {t.playlistLoading
+                        ? "Building playlist…"
+                        : "Make a 5-track playlist for this vibe"}
+                    </button>
+                  )}
+                  {t.playlistError && (
+                    <div className="text-xs text-red-400">
+                      Playlist failed: {t.playlistError}
+                    </div>
+                  )}
+                  {t.playlist && <PlaylistBlock playlist={t.playlist} />}
                 </motion.div>
               )}
 

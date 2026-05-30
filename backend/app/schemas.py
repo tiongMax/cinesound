@@ -119,6 +119,29 @@ class QueryRequest(BaseModel):
     session_id: str = Field(min_length=1, max_length=128)
 
 
+class PlaylistRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=1000)
+    session_id: str = Field(min_length=1, max_length=128)
+    length: int = Field(default=5, ge=3, le=15)
+
+
+class PlaylistTrack(BaseModel):
+    spotify_uri: str
+    track: str
+    artist: str
+    album: str | None = None
+    spotify_url: str
+    album_art_url: str | None = None
+    reason: str  # 1 short sentence — why this track fits the playlist mood
+
+
+class Playlist(BaseModel):
+    mood_detected: str
+    title: str  # LLM-generated, 3-6 words, evocative
+    intro: str  # 1-2 sentence vibe description
+    tracks: list[PlaylistTrack]
+
+
 class Feedback(BaseModel):
     session_id: str
     tmdb_id: int | None = None

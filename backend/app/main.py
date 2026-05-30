@@ -11,6 +11,7 @@ from app.db import close_pool, init_pool
 from app.middleware.rate_limit import limiter
 from app.routes.feedback import router as feedback_router
 from app.routes.me import router as me_router
+from app.routes.playlist import router as playlist_router
 from app.routes.query import router as query_router
 from app.routes.signin import router as signin_router
 
@@ -70,3 +71,4 @@ app.include_router(query_router)
 app.include_router(feedback_router)
 app.include_router(signin_router)
 app.include_router(me_router)
+app.include_router(playlist_router)

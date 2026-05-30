@@ -49,3 +49,20 @@ export interface FeedbackBody {
   tmdb_id?: number;
   spotify_uri?: string;
 }
+
+export interface PlaylistTrack {
+  spotify_uri: string;
+  track: string;
+  artist: string;
+  album?: string | null;
+  spotify_url: string;
+  album_art_url?: string | null;
+  reason: string;
+}
+
+export interface Playlist {
+  mood_detected: string;
+  title: string;
+  intro: string;
+  tracks: PlaylistTrack[];
+}
