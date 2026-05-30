@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { ExternalLink, Music } from "lucide-react";
 import type { MusicRec, Vote } from "@/lib/types";
+import PreviewPlayer from "./PreviewPlayer";
 import VoteButtons from "./VoteButtons";
 
 interface Props {
@@ -42,14 +43,19 @@ export default function MusicCard({ music, onVote }: Props) {
           </div>
           <p className="text-sm text-muted-foreground">{music.reason}</p>
           <div className="mt-2 flex items-center justify-between">
-            <a
-              href={music.spotify_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline"
-            >
-              Open in Spotify <ExternalLink className="h-3 w-3" />
-            </a>
+            <div className="flex items-center gap-2">
+              {music.preview_url && (
+                <PreviewPlayer url={music.preview_url} label={music.track} />
+              )}
+              <a
+                href={music.spotify_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline"
+              >
+                Open in Spotify <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
             {onVote && <VoteButtons onVote={onVote} />}
           </div>
         </div>

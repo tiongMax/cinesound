@@ -152,6 +152,7 @@ async def insert_batch(
             "vibe_description": vibe,
             "spotify_url": t.get("external_urls", {}).get("spotify"),
             "album_art_url": SpotifyClient.album_art_url(t),
+            "preview_url": t.get("preview_url"),  # 30s MP3 — may be None for some tracks
         }
         embedding_literal = "[" + ",".join(str(x) for x in v) + "]"
         rows.append((t["name"], json.dumps(metadata), embedding_literal))

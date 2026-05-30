@@ -66,9 +66,15 @@ async def build_playlist(
 
     fresh = fresh[: max(length * 3, length)]
     prompt = _build_prompt(profile_obj.shared_mood, length, fresh)
-    return await gemini_chat(
+    pl = await gemini_chat(
         prompt,
         response_schema=Playlist,
         system=PLAYLIST_SYSTEM,
         temperature=0.6,
     )
+    # splice preview_urls onto the LLM's picks by URI
+    by_uri = {c.spotify_uri: c.preview_url for c in fresh}
+    for t in pl.tracks:
+        if t.preview_url is None:
+            t.preview_url = by_uri.get(t.spotify_uri)
+    return pl

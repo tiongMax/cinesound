@@ -21,6 +21,7 @@ export interface MusicRec {
   reason: string;
   spotify_url: string;
   album_art_url?: string | null;
+  preview_url?: string | null;
 }
 
 export interface Pairing {
@@ -57,6 +58,7 @@ export interface PlaylistTrack {
   album?: string | null;
   spotify_url: string;
   album_art_url?: string | null;
+  preview_url?: string | null;
   reason: string;
 }
 

@@ -124,10 +124,26 @@ async def rank_and_pair(
         )
 
     prompt = _build_prompt(profile, movies, music)
-    return await gemini_chat_with_tools(
+    rec = await gemini_chat_with_tools(
         prompt,
         tools=RANKER_TOOLS,
         response_schema=Recommendation,
         system=RANKER_SYSTEM,
         temperature=0.6,
     )
+    return _enrich_pairings_with_preview_urls(rec, music)
+
+
+def _enrich_pairings_with_preview_urls(
+    rec: Recommendation, candidates: list[MusicCandidate]
+) -> Recommendation:
+    """Copy preview_url from candidates onto each picked pairing.
+
+    The LLM doesn't see preview_url in the prompt — we splice it in by URI
+    so the frontend can play the 30-second clip.
+    """
+    by_uri = {c.spotify_uri: c.preview_url for c in candidates}
+    for p in rec.pairings:
+        if p.music.preview_url is None:
+            p.music.preview_url = by_uri.get(p.music.spotify_uri)
+    return rec

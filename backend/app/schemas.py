@@ -34,6 +34,7 @@ class MusicRec(BaseModel):
     reason: str
     spotify_url: str
     album_art_url: str | None = None
+    preview_url: str | None = None  # 30-second MP3 preview from Spotify
 
 
 class Pairing(BaseModel):
@@ -102,6 +103,7 @@ class MusicCandidate(BaseModel):
     vibe_description: str | None = None
     spotify_url: str
     album_art_url: str | None = None
+    preview_url: str | None = None
     score: float = 0.0
 
 
@@ -132,6 +134,7 @@ class PlaylistTrack(BaseModel):
     album: str | None = None
     spotify_url: str
     album_art_url: str | None = None
+    preview_url: str | None = None
     reason: str  # 1 short sentence — why this track fits the playlist mood
 
 

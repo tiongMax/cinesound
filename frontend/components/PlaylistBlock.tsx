@@ -4,6 +4,7 @@ import Image from "next/image";
 import { ExternalLink, ListMusic, Music } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Playlist } from "@/lib/types";
+import PreviewPlayer from "./PreviewPlayer";
 
 export default function PlaylistBlock({ playlist }: { playlist: Playlist }) {
   return (
@@ -53,15 +54,18 @@ export default function PlaylistBlock({ playlist }: { playlist: Playlist }) {
                 <span className="italic">{t.reason}</span>
               </div>
             </div>
-            <a
-              href={t.spotify_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-              aria-label="Open in Spotify"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+            <div className="flex shrink-0 items-center gap-1">
+              {t.preview_url && <PreviewPlayer url={t.preview_url} label={t.track} />}
+              <a
+                href={t.spotify_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                aria-label="Open in Spotify"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
           </li>
         ))}
       </ol>

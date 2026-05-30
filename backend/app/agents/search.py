@@ -102,6 +102,7 @@ def _row_to_music(row) -> MusicCandidate:
         vibe_description=m.get("vibe_description"),
         spotify_url=m.get("spotify_url") or _track_url(m["spotify_uri"]),
         album_art_url=m.get("album_art_url"),
+        preview_url=m.get("preview_url"),
         score=float(row["similarity"]),
     )
 
