@@ -8,6 +8,7 @@ import { getOrCreateSessionId } from "@/lib/session";
 import type { Recommendation, Vote } from "@/lib/types";
 import RecommendationBlock from "./RecommendationBlock";
 import SignInButton from "./SignInButton";
+import TasteProfilePanel from "./TasteProfilePanel";
 
 type Turn = {
   id: string;
@@ -39,6 +40,7 @@ export default function Chat() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [profileTick, setProfileTick] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export default function Chat() {
     async (target: { tmdb_id?: number; spotify_uri?: string }, vote: Vote) => {
       if (!sessionId) return;
       await postFeedback({ session_id: sessionId, vote, ...target });
+      setProfileTick((n) => n + 1);
     },
     [sessionId],
   );
@@ -78,6 +81,7 @@ export default function Chat() {
         },
         onFinal: (rec) => {
           updateTurn(id, { status: "final", rec });
+          setProfileTick((n) => n + 1);
         },
         onError: (message) => {
           updateTurn(id, { status: "error", error: message });
@@ -98,11 +102,9 @@ export default function Chat() {
       <header className="border-b border-border px-6 py-4">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-xl font-semibold tracking-tight">CineSound</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {sessionId && (
-              <div className="text-xs text-muted-foreground">
-                device · {sessionId.slice(0, 16)}…
-              </div>
+              <TasteProfilePanel sessionId={sessionId} refreshKey={profileTick} />
             )}
             <SignInButton />
           </div>
