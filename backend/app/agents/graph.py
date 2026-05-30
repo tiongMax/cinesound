@@ -27,6 +27,7 @@ from app.agents.ranker import RANKER_SYSTEM, _build_prompt, filter_seen, rank_an
 from app.agents.search import search_movies, search_music
 from app.clients.gemini import GeminiError
 from app.clients.groq_client import groq_chat
+from app.conversation import append_turn, load_recent_turns, summarise_for_prompt
 from app.memory import append_to_list, get_all_memory
 from app.schemas import (
     MemoryKey,
@@ -49,6 +50,7 @@ class GraphState(TypedDict, total=False):
     pool: asyncpg.Pool
     # intermediate
     memory: dict[str, Any]
+    recent_turns_summary: str
     profile: TasteProfile
     movie_candidates: list[MovieCandidate]
     music_candidates: list[MusicCandidate]
@@ -60,13 +62,22 @@ class GraphState(TypedDict, total=False):
 
 
 async def _load_memory_node(state: GraphState) -> dict[str, Any]:
-    memory = await get_all_memory(state["pool"], state["session_id"])
-    return {"memory": memory}
+    pool = state["pool"]
+    sid = state["session_id"]
+    memory, turns = await asyncio.gather(
+        get_all_memory(pool, sid),
+        load_recent_turns(pool, sid),
+    )
+    return {"memory": memory, "recent_turns_summary": summarise_for_prompt(turns)}
 
 
 async def _profile_node(state: GraphState) -> dict[str, Any]:
     try:
-        prof = await profile(state["query"], memory=state.get("memory"))
+        prof = await profile(
+            state["query"],
+            memory=state.get("memory"),
+            recent_turns_summary=state.get("recent_turns_summary") or None,
+        )
     except GeminiError as e:
         log.warning("profile: Gemini failed (%s) — falling back to Groq", e)
         prof = await groq_chat(
@@ -141,6 +152,23 @@ async def _save_memory_node(state: GraphState) -> dict[str, Any]:
     for p in rec.pairings:
         await append_to_list(pool, sid, MemoryKey.WATCHED_MOVIES, p.movie.tmdb_id)
         await append_to_list(pool, sid, MemoryKey.HEARD_TRACKS, p.music.spotify_uri)
+
+    # Record the conversation turn for future follow-up handling
+    await append_turn(
+        pool,
+        sid,
+        {
+            "query": state["query"],
+            "shared_mood": prof.shared_mood,
+            "picks": [
+                {
+                    "movie": f"{p.movie.title} ({p.movie.year})" if p.movie.year else p.movie.title,
+                    "music": f"{p.music.track} — {p.music.artist}",
+                }
+                for p in rec.pairings
+            ],
+        },
+    )
 
     return {}
 

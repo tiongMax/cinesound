@@ -18,6 +18,7 @@ A typical query takes 3 LLM calls, hard-capped, and returns in <10s on a warm ba
 
 ## What's actually novel
 
+- **Conversational follow-up** — the orchestrator loads the last 3 turns from the `conversations` table and folds a compact summary into the profiler prompt, so "darker", "another please", "same vibe but uplifting" are interpreted against the most recent recommendation rather than treated as fresh queries.
 - **Joint Taste Profiler** — one Gemini call extracts a movie profile *and* a music profile *and* a shared mood, instead of running two independent agents. Cheaper, more coherent recommendations.
 - **Deterministic ranker + LLM pairer** — cosine similarity over pgvector ranks candidates; the LLM only handles the pairing prose. Keeps cost predictable and dedupe trivial.
 - **LLM tool calling on both LLM-touching agents** — the **Profiler** gets `search_movies_by_title(title)` + `search_artists(name)` to ground itself against real TMDB/Spotify catalogue data when the user references specific titles or artists (instead of hallucinating genres); the **Ranker** gets `get_movie_details(tmdb_id)` + `get_artist_top_tracks(artist_name)` to deep-dive top candidates before picking the final pair. Each agent is capped at 2 tool iterations to keep cost predictable.

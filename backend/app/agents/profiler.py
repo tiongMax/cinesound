@@ -62,7 +62,14 @@ You have two optional tools:
    or band by name. Returns real Spotify genre tags.
 
 Skip both tools entirely for vague mood queries ("I want to cry", "Friday night
-energy"). The cost ceiling for this step is 2 tool calls per query."""
+energy"). The cost ceiling for this step is 2 tool calls per query.
+
+If the user's query looks like a *follow-up* to recent turns (you'll see them
+in "Recent conversation" below the query), interpret references against the
+most recent turn: "another please" means a fresh recommendation in the same
+mood, "darker" means shift the mood toward something heavier/moodier, "same
+but uplifting" means shift toward warmer, etc. Carry forward the genre signals
+from the prior mood unless the user is clearly redirecting."""
 
 
 def _memory_snippet(memory: dict[str, Any]) -> str:
@@ -83,17 +90,28 @@ def _memory_snippet(memory: dict[str, Any]) -> str:
     return "\n".join(bits)
 
 
-async def profile(query: str, memory: dict[str, Any] | None = None) -> TasteProfile:
+async def profile(
+    query: str,
+    memory: dict[str, Any] | None = None,
+    *,
+    recent_turns_summary: str | None = None,
+) -> TasteProfile:
     """Run the Joint Profiler. Returns a validated TasteProfile.
 
     May invoke search_movies_by_title / search_artists tools when the query
     references specific titles or artists — bounded by the profiler tool cap.
+
+    If `recent_turns_summary` is provided, it's appended to the prompt so the
+    model can interpret follow-up phrases ("darker", "another please") against
+    prior turns.
     """
     prompt = f"User query: {query}"
     if memory:
         snippet = _memory_snippet(memory)
         if snippet:
             prompt = f"{prompt}\n\nUser memory:\n{snippet}"
+    if recent_turns_summary:
+        prompt = f"{prompt}\n\nRecent conversation:\n{recent_turns_summary}"
     return await gemini_chat_with_tools(
         prompt,
         tools=PROFILER_TOOLS,
