@@ -10,6 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
+from app.conversation import load_recent_turns
 from app.db import PoolDep
 from app.memory import get_all_memory
 
@@ -35,6 +36,7 @@ async def _delete_session_data(pool, session_id: str) -> dict[str, int]:
 router = APIRouter()
 
 RECENT_MOODS_SHOWN = 10
+RECENT_QUERIES_SHOWN = 5
 TOP_GENRES_SHOWN = 8
 
 
@@ -45,6 +47,7 @@ async def me_endpoint(
 ) -> dict:
     """Return a summary of what CineSound knows about this device."""
     memory = await get_all_memory(pool, session_id)
+    turns = await load_recent_turns(pool, session_id, limit=RECENT_QUERIES_SHOWN)
 
     watched = memory.get("watched_movies") or []
     heard = memory.get("heard_tracks") or []
@@ -63,6 +66,9 @@ async def me_endpoint(
         "top_liked_genres": _top_n_with_counts(liked, TOP_GENRES_SHOWN),
         "top_disliked_genres": _top_n_with_counts(disliked, TOP_GENRES_SHOWN),
         "recent_moods": (past_moods[-RECENT_MOODS_SHOWN:])[::-1],
+        "recent_queries": [
+            t.get("query", "") for t in turns if t.get("query")
+        ][::-1],
         "content_prefs": content_prefs,
     }
 

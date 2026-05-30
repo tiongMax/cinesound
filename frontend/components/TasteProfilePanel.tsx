@@ -11,12 +11,15 @@ interface Props {
   refreshKey?: number;
   /** Notify parent (e.g. Chat) when history was wiped so it can clear UI state. */
   onCleared?: () => void;
+  /** Re-run a previous query when the user clicks a recent-queries chip. */
+  onReplay?: (query: string) => void;
 }
 
 export default function TasteProfilePanel({
   sessionId,
   refreshKey = 0,
   onCleared,
+  onReplay,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [snap, setSnap] = useState<MeSnapshot | null>(null);
@@ -110,6 +113,15 @@ export default function TasteProfilePanel({
               {!loading && snap && (
                 <div className="space-y-6 text-sm">
                   <CountsRow snap={snap} />
+                  {snap.recent_queries.length > 0 && onReplay && (
+                    <RecentQueriesChips
+                      queries={snap.recent_queries}
+                      onReplay={(q) => {
+                        onReplay(q);
+                        setOpen(false);
+                      }}
+                    />
+                  )}
                   <GenreList title="Genres you've liked" items={snap.top_liked_genres} />
                   <GenreList
                     title="Genres you've passed on"
@@ -244,6 +256,35 @@ function MoodList({ moods }: { moods: string[] }) {
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+function RecentQueriesChips({
+  queries,
+  onReplay,
+}: {
+  queries: string[];
+  onReplay: (q: string) => void;
+}) {
+  return (
+    <section>
+      <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+        Try again
+      </h3>
+      <div className="flex flex-wrap gap-1.5">
+        {queries.map((q, i) => (
+          <button
+            key={`${i}-${q}`}
+            type="button"
+            onClick={() => onReplay(q)}
+            className="max-w-full truncate rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground hover:bg-accent"
+            title={q}
+          >
+            {q}
+          </button>
+        ))}
+      </div>
     </section>
   );
 }

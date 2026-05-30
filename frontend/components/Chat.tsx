@@ -87,37 +87,45 @@ export default function Chat() {
     [sessionId],
   );
 
+  const runQuery = useCallback(
+    async (q: string) => {
+      if (!q || submitting || !sessionId) return;
+      setSubmitting(true);
+      const id = crypto.randomUUID();
+      setTurns((ts) => [...ts, { id, query: q, status: "thinking" }]);
+
+      try {
+        await streamQuery(q, sessionId, {
+          onNode: (node) => {
+            const label = NODE_LABEL[node];
+            if (label) updateTurn(id, { status: label });
+          },
+          onFinal: (rec) => {
+            updateTurn(id, { status: "final", rec });
+            setProfileTick((n) => n + 1);
+          },
+          onError: (message) => {
+            updateTurn(id, { status: "error", error: message });
+          },
+        });
+      } catch (err) {
+        updateTurn(id, {
+          status: "error",
+          error: err instanceof Error ? err.message : "unknown error",
+        });
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [sessionId, submitting],
+  );
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const q = input.trim();
-    if (!q || submitting || !sessionId) return;
+    if (!q) return;
     setInput("");
-    setSubmitting(true);
-    const id = crypto.randomUUID();
-    setTurns((ts) => [...ts, { id, query: q, status: "thinking" }]);
-
-    try {
-      await streamQuery(q, sessionId, {
-        onNode: (node) => {
-          const label = NODE_LABEL[node];
-          if (label) updateTurn(id, { status: label });
-        },
-        onFinal: (rec) => {
-          updateTurn(id, { status: "final", rec });
-          setProfileTick((n) => n + 1);
-        },
-        onError: (message) => {
-          updateTurn(id, { status: "error", error: message });
-        },
-      });
-    } catch (err) {
-      updateTurn(id, {
-        status: "error",
-        error: err instanceof Error ? err.message : "unknown error",
-      });
-    } finally {
-      setSubmitting(false);
-    }
+    await runQuery(q);
   };
 
   return (
@@ -131,6 +139,7 @@ export default function Chat() {
                 sessionId={sessionId}
                 refreshKey={profileTick}
                 onCleared={() => setTurns([])}
+                onReplay={(q) => void runQuery(q)}
               />
             )}
             <SignInButton />

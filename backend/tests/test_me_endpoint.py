@@ -47,6 +47,7 @@ def test_delete_me_requires_session_id(client):
 
 def test_me_returns_empty_state_for_new_session(client, monkeypatch):
     monkeypatch.setattr(me_mod, "get_all_memory", AsyncMock(return_value={}))
+    monkeypatch.setattr(me_mod, "load_recent_turns", AsyncMock(return_value=[]))
     r = client.get("/me?session_id=session:new")
     assert r.status_code == 200
     body = r.json()
@@ -58,9 +59,28 @@ def test_me_returns_empty_state_for_new_session(client, monkeypatch):
     }
     assert body["top_liked_genres"] == []
     assert body["recent_moods"] == []
+    assert body["recent_queries"] == []
+
+
+def test_me_returns_recent_queries_newest_first(client, monkeypatch):
+    monkeypatch.setattr(me_mod, "get_all_memory", AsyncMock(return_value={}))
+    monkeypatch.setattr(
+        me_mod,
+        "load_recent_turns",
+        AsyncMock(
+            return_value=[
+                {"query": "older"},
+                {"query": "middle"},
+                {"query": "newest"},
+            ]
+        ),
+    )
+    r = client.get("/me?session_id=s1")
+    assert r.json()["recent_queries"] == ["newest", "middle", "older"]
 
 
 def test_me_returns_aggregated_state(client, monkeypatch):
+    monkeypatch.setattr(me_mod, "load_recent_turns", AsyncMock(return_value=[]))
     monkeypatch.setattr(
         me_mod,
         "get_all_memory",

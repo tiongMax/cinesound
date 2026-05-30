@@ -15,6 +15,7 @@ export interface MeSnapshot {
   top_liked_genres: GenreCount[];
   top_disliked_genres: GenreCount[];
   recent_moods: string[];
+  recent_queries: string[];
   content_prefs: Record<string, boolean>;
 }
 
