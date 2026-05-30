@@ -3,6 +3,7 @@
 import MovieCard from "./MovieCard";
 import MusicCard from "./MusicCard";
 import PairingNote from "./PairingNote";
+import ShareButton from "./ShareButton";
 import type { Recommendation, Vote } from "@/lib/types";
 
 interface Props {
@@ -26,6 +27,7 @@ export default function RecommendationBlock({ rec, onVote }: Props) {
           <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
             <span>Pairing {i + 1}</span>
             <span className="h-px flex-1 bg-border" />
+            <ShareButton pairing={p} mood={rec.mood_detected} />
           </div>
           <MovieCard
             movie={p.movie}

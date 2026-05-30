@@ -121,6 +121,17 @@ class QueryRequest(BaseModel):
     session_id: str = Field(min_length=1, max_length=128)
 
 
+class ShareRequest(BaseModel):
+    pairing: Pairing  # forward ref OK — Pairing defined above
+    mood: str = Field(min_length=1, max_length=200)
+
+
+class ShareResponse(BaseModel):
+    short_code: str
+    pairing: Pairing
+    mood: str
+
+
 class PlaylistRequest(BaseModel):
     query: str = Field(min_length=1, max_length=1000)
     session_id: str = Field(min_length=1, max_length=128)
