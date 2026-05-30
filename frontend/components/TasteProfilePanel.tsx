@@ -1,20 +1,46 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Sparkles, User, X } from "lucide-react";
+import { RotateCcw, Sparkles, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { fetchMe, type MeSnapshot } from "@/lib/me";
+import { clearMe, fetchMe, type MeSnapshot } from "@/lib/me";
 
 interface Props {
   sessionId: string;
   /** Bump this number from the parent to force a refetch (e.g. after a query). */
   refreshKey?: number;
+  /** Notify parent (e.g. Chat) when history was wiped so it can clear UI state. */
+  onCleared?: () => void;
 }
 
-export default function TasteProfilePanel({ sessionId, refreshKey = 0 }: Props) {
+export default function TasteProfilePanel({
+  sessionId,
+  refreshKey = 0,
+  onCleared,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [snap, setSnap] = useState<MeSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  const handleClear = async () => {
+    if (!sessionId) return;
+    setClearing(true);
+    try {
+      await clearMe(sessionId);
+      setSnap(null);
+      setConfirmClear(false);
+      onCleared?.();
+      // Reload from server (now empty)
+      const fresh = await fetchMe(sessionId);
+      setSnap(fresh);
+    } catch {
+      // best-effort; leave the panel as-is
+    } finally {
+      setClearing(false);
+    }
+  };
 
   useEffect(() => {
     if (!open || !sessionId) return;
@@ -94,6 +120,42 @@ export default function TasteProfilePanel({ sessionId, refreshKey = 0 }: Props) 
                   {Object.keys(snap.content_prefs).length > 0 && (
                     <ContentPrefs prefs={snap.content_prefs} />
                   )}
+
+                  <div className="border-t border-border pt-4">
+                    {!confirmClear ? (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmClear(true)}
+                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-red-400"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Reset taste profile…
+                      </button>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">
+                          This wipes watch history, liked/disliked genres, and recent moods for this device. Can&apos;t be undone.
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleClear}
+                            disabled={clearing}
+                            className="rounded-md bg-red-500/80 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
+                          >
+                            {clearing ? "Resetting…" : "Yes, reset everything"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmClear(false)}
+                            className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </motion.aside>

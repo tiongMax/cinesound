@@ -32,6 +32,19 @@ def test_me_requires_session_id(client):
     assert r.status_code == 422
 
 
+def test_delete_me_wipes_session_data(client, fake_pool):
+    fake_pool.execute = AsyncMock(side_effect=["DELETE 5", "DELETE 1"])
+    r = client.request("DELETE", "/me", params={"session_id": "s1"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["deleted"] == {"memory_rows": 5, "conversation_rows": 1}
+
+
+def test_delete_me_requires_session_id(client):
+    r = client.request("DELETE", "/me")
+    assert r.status_code == 422
+
+
 def test_me_returns_empty_state_for_new_session(client, monkeypatch):
     monkeypatch.setattr(me_mod, "get_all_memory", AsyncMock(return_value={}))
     r = client.get("/me?session_id=session:new")

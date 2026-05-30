@@ -127,7 +127,11 @@ export default function Chat() {
           <h1 className="text-xl font-semibold tracking-tight">CineSound</h1>
           <div className="flex items-center gap-3">
             {sessionId && (
-              <TasteProfilePanel sessionId={sessionId} refreshKey={profileTick} />
+              <TasteProfilePanel
+                sessionId={sessionId}
+                refreshKey={profileTick}
+                onCleared={() => setTurns([])}
+              />
             )}
             <SignInButton />
           </div>

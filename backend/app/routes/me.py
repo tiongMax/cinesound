@@ -13,6 +13,25 @@ from fastapi import APIRouter, Query
 from app.db import PoolDep
 from app.memory import get_all_memory
 
+
+async def _delete_session_data(pool, session_id: str) -> dict[str, int]:
+    """Wipe all per-session memory + conversation rows. Returns row counts deleted."""
+    result_mem = await pool.execute(
+        "DELETE FROM user_memory WHERE user_id = $1", session_id
+    )
+    result_conv = await pool.execute(
+        "DELETE FROM conversations WHERE session_id = $1", session_id
+    )
+
+    def _count(result: str) -> int:
+        parts = result.split()
+        return int(parts[-1]) if parts and parts[-1].isdigit() else 0
+
+    return {
+        "memory_rows": _count(result_mem),
+        "conversation_rows": _count(result_conv),
+    }
+
 router = APIRouter()
 
 RECENT_MOODS_SHOWN = 10
@@ -46,6 +65,16 @@ async def me_endpoint(
         "recent_moods": (past_moods[-RECENT_MOODS_SHOWN:])[::-1],
         "content_prefs": content_prefs,
     }
+
+
+@router.delete("/me")
+async def delete_me(
+    pool: PoolDep,
+    session_id: Annotated[str, Query(min_length=1, max_length=128)],
+) -> dict:
+    """Wipe memory + conversation history for this session. Irreversible."""
+    deleted = await _delete_session_data(pool, session_id)
+    return {"session_id": session_id, "deleted": deleted}
 
 
 def _top_n_with_counts(values: list, n: int) -> list[dict]:

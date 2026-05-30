@@ -25,3 +25,11 @@ export async function fetchMe(sessionId: string): Promise<MeSnapshot> {
   if (!r.ok) throw new Error(`/me: HTTP ${r.status}`);
   return r.json();
 }
+
+export async function clearMe(sessionId: string): Promise<void> {
+  const r = await fetch(
+    `${API_URL}/me?session_id=${encodeURIComponent(sessionId)}`,
+    { method: "DELETE" },
+  );
+  if (!r.ok) throw new Error(`/me: HTTP ${r.status}`);
+}
