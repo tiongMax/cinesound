@@ -8,6 +8,7 @@ import { buildPlaylist } from "@/lib/playlist";
 import { streamQuery } from "@/lib/queryClient";
 import { getOrCreateSessionId } from "@/lib/session";
 import type { Playlist, Recommendation, Vote } from "@/lib/types";
+import MoodSpectrum from "./MoodSpectrum";
 import PlaylistBlock from "./PlaylistBlock";
 import RecommendationBlock from "./RecommendationBlock";
 import SignInButton from "./SignInButton";
@@ -191,18 +192,26 @@ export default function Chat() {
                 >
                   <RecommendationBlock rec={t.rec} onVote={handleVote} />
 
-                  {t.rec.pairings.length > 0 && !t.playlist && (
-                    <button
-                      type="button"
-                      onClick={() => handleMakePlaylist(t.id, t.query)}
-                      disabled={t.playlistLoading}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-                    >
-                      <ListMusic className="h-3.5 w-3.5" />
-                      {t.playlistLoading
-                        ? "Building playlist…"
-                        : "Make a 5-track playlist for this vibe"}
-                    </button>
+                  {t.rec.pairings.length > 0 && (
+                    <>
+                      <MoodSpectrum
+                        onRefine={(modifier) => void runQuery(modifier)}
+                        disabled={submitting}
+                      />
+                      {!t.playlist && (
+                        <button
+                          type="button"
+                          onClick={() => handleMakePlaylist(t.id, t.query)}
+                          disabled={t.playlistLoading}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        >
+                          <ListMusic className="h-3.5 w-3.5" />
+                          {t.playlistLoading
+                            ? "Building playlist…"
+                            : "Make a 5-track playlist for this vibe"}
+                        </button>
+                      )}
+                    </>
                   )}
                   {t.playlistError && (
                     <div className="text-xs text-red-400">
