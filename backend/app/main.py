@@ -2,9 +2,19 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import settings
 from app.db import close_pool, init_pool
+from app.middleware.rate_limit import limiter
+from app.routes.feedback import router as feedback_router
+from app.routes.me import router as me_router
+from app.routes.playlist import router as playlist_router
+from app.routes.query import router as query_router
+from app.routes.share import router as share_router
+from app.routes.signin import router as signin_router
 
 
 @asynccontextmanager
@@ -24,6 +34,11 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# rate limiter — attached to app state so route decorators can find it
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,3 +66,11 @@ async def health_db() -> dict[str, str | int]:
     async with pool.acquire() as conn:
         result = await conn.fetchval("SELECT 1")
     return {"status": "ok", "select_1": result}
+
+
+app.include_router(query_router)
+app.include_router(feedback_router)
+app.include_router(signin_router)
+app.include_router(me_router)
+app.include_router(playlist_router)
+app.include_router(share_router)

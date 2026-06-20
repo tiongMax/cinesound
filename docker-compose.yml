@@ -1,0 +1,31 @@
+# Local development DB only. Production runs against Neon (see DEPLOY.md).
+#
+# Usage:
+#   docker compose up -d       # start
+#   docker compose logs -f db  # tail
+#   docker compose down        # stop, keep data
+#   docker compose down -v     # stop + wipe data volume
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: cinesound-db
+    environment:
+      POSTGRES_USER: cinesound
+      POSTGRES_PASSWORD: cinesound
+      POSTGRES_DB: cinesound
+    ports:
+      # Host port 15432 to avoid clashing with a system Postgres on 5432
+      # and Docker's WSL relay holding lower ports across container restarts.
+      # Adjust DATABASE_URL in backend/.env if you change this.
+      - "15432:5432"
+    volumes:
+      - cinesound_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cinesound -d cinesound"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  cinesound_pgdata:

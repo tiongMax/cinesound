@@ -34,15 +34,28 @@ class MusicRec(BaseModel):
     reason: str
     spotify_url: str
     album_art_url: str | None = None
+    preview_url: str | None = None  # 30-second MP3 preview from Spotify
+
+
+class Pairing(BaseModel):
+    """A single movie + music pairing with its rationale."""
+
+    movie: MovieRec
+    music: MusicRec
+    pairing_note: str
 
 
 class Recommendation(BaseModel):
-    """Final response shape returned to the client."""
+    """Final response shape returned to the client.
+
+    Holds up to N pairings (typically 3). When `pairings` is empty
+    (daily cap reached, no candidates left after filtering, etc.),
+    the UI shows `fallback_message` instead.
+    """
 
     mood_detected: str
-    movies: list[MovieRec]
-    music: list[MusicRec]
-    pairing_note: str
+    pairings: list[Pairing] = Field(default_factory=list)
+    fallback_message: str | None = None
 
 
 # ---------- Taste profile (Joint Profiler output, T15) ----------
@@ -90,6 +103,7 @@ class MusicCandidate(BaseModel):
     vibe_description: str | None = None
     spotify_url: str
     album_art_url: str | None = None
+    preview_url: str | None = None
     score: float = 0.0
 
 
@@ -105,6 +119,41 @@ class RankerInput(BaseModel):
 class QueryRequest(BaseModel):
     query: str = Field(min_length=1, max_length=1000)
     session_id: str = Field(min_length=1, max_length=128)
+
+
+class ShareRequest(BaseModel):
+    pairing: Pairing  # forward ref OK — Pairing defined above
+    mood: str = Field(min_length=1, max_length=200)
+
+
+class ShareResponse(BaseModel):
+    short_code: str
+    pairing: Pairing
+    mood: str
+
+
+class PlaylistRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=1000)
+    session_id: str = Field(min_length=1, max_length=128)
+    length: int = Field(default=5, ge=3, le=15)
+
+
+class PlaylistTrack(BaseModel):
+    spotify_uri: str
+    track: str
+    artist: str
+    album: str | None = None
+    spotify_url: str
+    album_art_url: str | None = None
+    preview_url: str | None = None
+    reason: str  # 1 short sentence — why this track fits the playlist mood
+
+
+class Playlist(BaseModel):
+    mood_detected: str
+    title: str  # LLM-generated, 3-6 words, evocative
+    intro: str  # 1-2 sentence vibe description
+    tracks: list[PlaylistTrack]
 
 
 class Feedback(BaseModel):

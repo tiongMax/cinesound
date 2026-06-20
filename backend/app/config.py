@@ -14,9 +14,6 @@ class Settings(BaseSettings):
     database_url: str | None = None
 
     tmdb_api_key: str | None = None
-    spotify_client_id: str | None = None
-    spotify_client_secret: str | None = None
-
     gemini_api_key: str | None = None
     groq_api_key: str | None = None
 

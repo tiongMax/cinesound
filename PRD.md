@@ -1,7 +1,7 @@
 # Product Requirements Document
 # CineSound — AI Entertainment Recommendation Agent
 
-**Version:** 2.0
+**Version:** 2.1
 **Author:** CineSound Project
 **Status:** Draft
 
@@ -238,33 +238,34 @@ CREATE TABLE daily_usage (
 ```json
 {
   "mood_detected": "reflective, emotional, cinematic",
-  "movies": [
+  "pairings": [
     {
-      "tmdb_id": 329865,
-      "title": "Arrival",
-      "year": 2016,
-      "rating": 7.9,
-      "genres": ["Sci-Fi", "Drama"],
-      "reason": "Same emotional sci-fi depth as Interstellar",
-      "trailer_url": "https://youtube.com/watch?v=..."
+      "movie": {
+        "tmdb_id": 329865,
+        "title": "Arrival",
+        "year": 2016,
+        "rating": 7.9,
+        "genres": ["Sci-Fi", "Drama"],
+        "reason": "Same emotional sci-fi depth as Interstellar",
+        "trailer_url": "https://youtube.com/watch?v=..."
+      },
+      "music": {
+        "spotify_uri": "spotify:track:...",
+        "track": "Day One",
+        "artist": "Hans Zimmer",
+        "album": "Interstellar OST",
+        "mood_tag": "cinematic ambient",
+        "reason": "Matches your reflective mood",
+        "spotify_url": "https://open.spotify.com/track/..."
+      },
+      "pairing_note": "Listen to Hans Zimmer while watching Arrival for the full effect."
     }
   ],
-  "music": [
-    {
-      "spotify_uri": "spotify:track:...",
-      "track": "Day One",
-      "artist": "Hans Zimmer",
-      "album": "Interstellar OST",
-      "mood_tag": "cinematic ambient",
-      "reason": "Matches your reflective mood",
-      "spotify_url": "https://open.spotify.com/track/..."
-    }
-  ],
-  "pairing_note": "Listen to Hans Zimmer while watching Arrival for the full effect."
+  "fallback_message": null
 }
 ```
 
-`tmdb_id` and `spotify_uri` are the canonical dedupe keys against `watched_movies` and `heard_tracks` in memory.
+`tmdb_id` and `spotify_uri` (per pairing) are the canonical dedupe keys against `watched_movies` and `heard_tracks` in memory. The ranker returns up to 3 distinct pairings per query (v2.1). When the daily cap is hit or no candidates survive filtering, `pairings` is empty and `fallback_message` carries the user-facing explanation.
 
 ---
 
