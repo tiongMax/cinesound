@@ -155,6 +155,8 @@ def _poster_url(poster_path: str | None) -> str | None:
 
 
 def _track_url(spotify_uri: str) -> str:
+    if spotify_uri.startswith("itunes:track:"):
+        return f"https://music.apple.com/us/search?term={spotify_uri.rsplit(':', 1)[-1]}"
     kind, _, ident = spotify_uri.rpartition(":")
     kind = kind.split(":")[-1]
     return f"https://open.spotify.com/{kind}/{ident}"

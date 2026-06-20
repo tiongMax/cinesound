@@ -61,7 +61,7 @@ export default function PlaylistBlock({ playlist }: { playlist: Playlist }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-full p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                aria-label="Open in Spotify"
+                aria-label="Open track"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>

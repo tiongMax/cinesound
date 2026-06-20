@@ -29,6 +29,19 @@ def _final_response(payload: dict | None, text: str | None = None) -> SimpleName
     )
 
 
+def _text_final_response(text: str) -> SimpleNamespace:
+    """Build a fake Gemini response that has raw text instead of SDK parsing."""
+    return SimpleNamespace(
+        candidates=[
+            SimpleNamespace(
+                content=SimpleNamespace(parts=[SimpleNamespace(function_call=None)])
+            )
+        ],
+        parsed=None,
+        text=text,
+    )
+
+
 def _tool_call_response(name: str, args: dict) -> SimpleNamespace:
     """Build a fake Gemini response that requests a tool call."""
     fc = SimpleNamespace(name=name, args=args)
@@ -69,6 +82,10 @@ async def test_returns_immediately_when_no_tool_call(monkeypatch):
     assert out.answer == "direct"
     handler.assert_not_awaited()
 
+    config = client.aio.models.generate_content.await_args.kwargs["config"]
+    assert config.response_mime_type is None
+    assert config.response_schema is None
+
 
 async def test_executes_one_tool_then_returns(monkeypatch):
     """Turn 1: model asks for a tool. Turn 2: model returns final JSON."""
@@ -92,6 +109,23 @@ async def test_executes_one_tool_then_returns(monkeypatch):
     out = await gemini_chat_with_tools("hi", response_schema=_Out, tools=[tool])
     assert out.answer == "after tool"
     handler.assert_awaited_once_with(q="foo")
+
+
+async def test_parses_final_text_when_tools_disable_sdk_parsing(monkeypatch):
+    """Gemini cannot combine tools with JSON mime type, so parse final text locally."""
+    client = _make_mock_client([_text_final_response('{"answer": "from text"}')])
+    monkeypatch.setattr(gem_mod, "_client", client)
+    monkeypatch.setattr(gem_mod.settings, "gemini_api_key", "fake")
+
+    tool = ToolSpec(
+        name="get_x",
+        description="d",
+        parameters=types.Schema(type=types.Type.OBJECT, properties={}, required=[]),
+        handler=AsyncMock(),
+    )
+
+    out = await gemini_chat_with_tools("hi", response_schema=_Out, tools=[tool])
+    assert out.answer == "from text"
 
 
 async def test_tool_handler_exception_returns_error_to_model(monkeypatch):

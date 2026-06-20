@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from langchain_core.prompts import ChatPromptTemplate
+
 from app.agents.tools import PROFILER_TOOLS
 from app.clients.gemini import gemini_chat_with_tools
 from app.schemas import TasteProfile
@@ -71,6 +73,15 @@ mood, "darker" means shift the mood toward something heavier/moodier, "same
 but uplifting" means shift toward warmer, etc. Carry forward the genre signals
 from the prior mood unless the user is clearly redirecting."""
 
+PROFILER_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "human",
+            "User query: {query}{memory_section}{recent_conversation_section}",
+        )
+    ]
+)
+
 
 def _memory_snippet(memory: dict[str, Any]) -> str:
     """Compress the user's memory into a short prompt addendum."""
@@ -90,6 +101,38 @@ def _memory_snippet(memory: dict[str, Any]) -> str:
     return "\n".join(bits)
 
 
+def _render_prompt(
+    query: str,
+    memory: dict[str, Any] | None = None,
+    *,
+    recent_turns_summary: str | None = None,
+) -> str:
+    """Build the human prompt with LangChain while Gemini owns model execution."""
+    memory_section = ""
+    if memory:
+        snippet = _memory_snippet(memory)
+        if snippet:
+            memory_section = f"\n\nUser memory:\n{snippet}"
+
+    recent_conversation_section = ""
+    if recent_turns_summary:
+        recent_conversation_section = (
+            f"\n\nRecent conversation:\n{recent_turns_summary}"
+        )
+
+    prompt_value = PROFILER_PROMPT.invoke(
+        {
+            "query": query,
+            "memory_section": memory_section,
+            "recent_conversation_section": recent_conversation_section,
+        }
+    )
+    content = prompt_value.messages[0].content
+    if not isinstance(content, str):
+        raise TypeError("Expected LangChain profiler prompt content to be text")
+    return content
+
+
 async def profile(
     query: str,
     memory: dict[str, Any] | None = None,
@@ -105,13 +148,11 @@ async def profile(
     model can interpret follow-up phrases ("darker", "another please") against
     prior turns.
     """
-    prompt = f"User query: {query}"
-    if memory:
-        snippet = _memory_snippet(memory)
-        if snippet:
-            prompt = f"{prompt}\n\nUser memory:\n{snippet}"
-    if recent_turns_summary:
-        prompt = f"{prompt}\n\nRecent conversation:\n{recent_turns_summary}"
+    prompt = _render_prompt(
+        query,
+        memory,
+        recent_turns_summary=recent_turns_summary,
+    )
     return await gemini_chat_with_tools(
         prompt,
         tools=PROFILER_TOOLS,

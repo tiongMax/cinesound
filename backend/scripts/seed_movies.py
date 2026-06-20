@@ -1,7 +1,7 @@
 """Seed the embeddings table with ~5k popular movies from TMDB.
 
 Idempotent: rows are upserted on the unique index over metadata->>'tmdb_id'.
-Embeds the TMDB `overview` field using Gemini's text-embedding-004 (768d).
+Embeds the TMDB `overview` field using Gemini's gemini-embedding-001 (768d).
 
 Usage:
     uv run python -m scripts.seed_movies                 # default: 5k movies

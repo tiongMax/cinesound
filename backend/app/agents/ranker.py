@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from langchain_core.prompts import ChatPromptTemplate
+
 from app.agents.tools import RANKER_TOOLS
 from app.clients.gemini import gemini_chat_with_tools
 from app.schemas import MovieCandidate, MusicCandidate, Recommendation, TasteProfile
@@ -44,6 +46,25 @@ You have two optional tools available:
 Skip the tools entirely if the choices are already obvious. Use the candidate
 metadata as-is for tmdb_id, spotify_uri, title, year, etc. Do not invent fields.
 Output a single Recommendation JSON object with a `pairings` array of length 3."""
+
+RANKER_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "human",
+            """Shared mood: {shared_mood}
+Movie mood: {movie_mood}
+Music mood: {music_mood}
+
+Movie candidates:
+{movie_candidates}
+
+Music candidates:
+{music_candidates}
+
+Build {target_pairings} distinct pairings.""",
+        )
+    ]
+)
 
 
 def filter_seen(
@@ -88,14 +109,20 @@ def _build_prompt(
         f"vibe: {(t.vibe_description or '')[:200]}"
         for t in music
     ]
-    return (
-        f"Shared mood: {profile.shared_mood}\n"
-        f"Movie mood: {profile.movie_profile.mood}\n"
-        f"Music mood: {profile.music_profile.mood}\n\n"
-        f"Movie candidates:\n" + "\n".join(movie_lines) + "\n\n"
-        "Music candidates:\n" + "\n".join(music_lines) + "\n\n"
-        f"Build {TARGET_PAIRINGS} distinct pairings."
+    prompt_value = RANKER_PROMPT.invoke(
+        {
+            "shared_mood": profile.shared_mood,
+            "movie_mood": profile.movie_profile.mood,
+            "music_mood": profile.music_profile.mood,
+            "movie_candidates": "\n".join(movie_lines),
+            "music_candidates": "\n".join(music_lines),
+            "target_pairings": TARGET_PAIRINGS,
+        }
     )
+    content = prompt_value.messages[0].content
+    if not isinstance(content, str):
+        raise TypeError("Expected LangChain ranker prompt content to be text")
+    return content
 
 
 async def rank_and_pair(

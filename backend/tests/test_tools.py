@@ -55,16 +55,29 @@ async def test_get_artist_top_tracks_returns_top_n(monkeypatch):
     fake.__aexit__ = AsyncMock(return_value=None)
     fake.search_artist = AsyncMock(
         return_value=[
-            {"id": "hz1", "name": "Hans Zimmer", "genres": ["score"], "popularity": 80}
+            {
+                "artistId": 1,
+                "artistName": "Hans Zimmer",
+                "primaryGenreName": "Soundtrack",
+            }
         ]
     )
-    fake.get_artist_top_tracks = AsyncMock(
+    fake.search_track = AsyncMock(
         return_value=[
-            {"name": "Day One", "album": {"name": "Interstellar OST"}, "popularity": 70},
-            {"name": "Time", "album": {"name": "Inception OST"}, "popularity": 95},
+            {
+                "trackName": "Day One",
+                "collectionName": "Interstellar OST",
+                "primaryGenreName": "Soundtrack",
+                "previewUrl": "https://audio.example/day-one.m4a",
+            },
+            {
+                "trackName": "Time",
+                "collectionName": "Inception OST",
+                "primaryGenreName": "Soundtrack",
+            },
         ]
     )
-    monkeypatch.setattr(tools_mod, "SpotifyClient", lambda: fake)
+    monkeypatch.setattr(tools_mod, "ITunesClient", lambda: fake)
 
     out = await get_artist_top_tracks("Hans Zimmer", limit=5)
 
@@ -79,7 +92,7 @@ async def test_get_artist_top_tracks_handles_unknown_artist(monkeypatch):
     fake.__aenter__ = AsyncMock(return_value=fake)
     fake.__aexit__ = AsyncMock(return_value=None)
     fake.search_artist = AsyncMock(return_value=[])
-    monkeypatch.setattr(tools_mod, "SpotifyClient", lambda: fake)
+    monkeypatch.setattr(tools_mod, "ITunesClient", lambda: fake)
 
     out = await get_artist_top_tracks("Unknown Artist")
 
@@ -144,20 +157,20 @@ async def test_search_artists_returns_top_matches(monkeypatch):
     fake.search_artist = AsyncMock(
         return_value=[
             {
-                "id": "kl1",
-                "name": "Kendrick Lamar",
-                "genres": ["west coast hip hop", "conscious hip hop"],
-                "popularity": 90,
+                "artistId": 2,
+                "artistName": "Kendrick Lamar",
+                "primaryGenreName": "Hip-Hop/Rap",
+                "artistLinkUrl": "https://music.apple.com/us/artist/kendrick-lamar/id368183298",
             }
         ]
     )
-    monkeypatch.setattr(tools_mod, "SpotifyClient", lambda: fake)
+    monkeypatch.setattr(tools_mod, "ITunesClient", lambda: fake)
 
     out = await search_artists("Kendrick")
 
     assert out["query"] == "Kendrick"
     assert out["matches"][0]["name"] == "Kendrick Lamar"
-    assert "west coast hip hop" in out["matches"][0]["genres"]
+    assert "Hip-Hop/Rap" in out["matches"][0]["genres"]
 
 
 # ---------- profiler tool declarations ----------

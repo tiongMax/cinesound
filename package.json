@@ -1,0 +1,16 @@
+{
+  "name": "cinesound",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "db": "docker compose up -d",
+    "migrate": "cd backend && uv --cache-dir ../.uv-cache run python -m scripts.migrate",
+    "backend": "cd backend && uv --cache-dir ../.uv-cache run uvicorn app.main:app --reload --reload-dir app --reload-dir scripts --reload-dir migrations",
+    "frontend": "cd frontend && npm run dev",
+    "dev": "concurrently -n backend,frontend -c green,cyan \"npm run backend\" \"npm run frontend\"",
+    "dev:full": "npm run db && npm run migrate && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

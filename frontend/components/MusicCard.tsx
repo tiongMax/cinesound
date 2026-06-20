@@ -53,7 +53,7 @@ export default function MusicCard({ music, onVote }: Props) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline"
               >
-                Open in Spotify <ExternalLink className="h-3 w-3" />
+                Open track <ExternalLink className="h-3 w-3" />
               </a>
             </div>
             {onVote && <VoteButtons onVote={onVote} />}

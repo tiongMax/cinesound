@@ -1,10 +1,10 @@
-"""Seed the embeddings table with ~2-5k tracks from Spotify.
+"""Seed the embeddings table with ~2-5k tracks from the iTunes Search API.
 
 Pipeline per track:
-  1. Spotify /search by genre tag -> top N tracks
+  1. iTunes /search by genre tag -> top N tracks
   2. Gemini Flash generates a one-paragraph "vibe description"
      (cached to .vibe_cache.json on disk so re-runs don't regenerate)
-  3. Embed the vibe description with text-embedding-004 (768d)
+  3. Embed the vibe description with gemini-embedding-001 (768d)
   4. Upsert into embeddings on metadata->>'spotify_uri'
 
 Usage:
@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pydantic import BaseModel  # noqa: E402
 
 from app.clients.gemini import EMBED_DIM, embed, gemini_chat  # noqa: E402
-from app.clients.spotify import SpotifyClient  # noqa: E402
+from app.clients.itunes import ITunesClient  # noqa: E402
 from app.config import settings  # noqa: E402
 from app.db import close_pool, init_pool  # noqa: E402
 
@@ -91,13 +91,13 @@ def save_vibe_cache(cache: dict[str, str]) -> None:
 
 async def generate_vibe(track: dict, cache: dict[str, str]) -> str:
     """Generate a vibe description, hitting the on-disk cache first."""
-    uri = track["uri"]
+    uri = ITunesClient.track_uri(track)
     if uri in cache:
         return cache[uri]
-    artists = ", ".join(a["name"] for a in track.get("artists", []))
     prompt = (
-        f"Track: '{track['name']}' by {artists}. "
-        f"Album: '{track.get('album', {}).get('name', 'unknown')}'.\n"
+        f"Track: '{track['trackName']}' by {track.get('artistName', 'unknown artist')}. "
+        f"Album: '{track.get('collectionName', 'unknown')}'. "
+        f"Genre: '{track.get('primaryGenreName', track.get('_seed_genre', 'unknown'))}'.\n"
         "Write the vibe description."
     )
     try:
@@ -109,25 +109,25 @@ async def generate_vibe(track: dict, cache: dict[str, str]) -> str:
         return ""
 
 
-async def existing_spotify_uris(pool) -> set[str]:
+async def existing_music_uris(pool) -> set[str]:
     rows = await pool.fetch(
         "SELECT metadata->>'spotify_uri' AS uri FROM embeddings WHERE type='music'"
     )
     return {r["uri"] for r in rows if r["uri"]}
 
 
-async def collect_tracks(spotify: SpotifyClient, per_genre: int) -> list[dict]:
-    """Search Spotify for top tracks per genre, dedupe by URI."""
+async def collect_tracks(itunes: ITunesClient, per_genre: int) -> list[dict]:
+    """Search iTunes for top tracks per genre, dedupe by track ID."""
     seen: dict[str, dict] = {}
     for genre in GENRES:
         try:
-            tracks = await spotify.search_track(f'genre:"{genre}"', limit=per_genre)
+            tracks = await itunes.search_track(genre, limit=per_genre)
         except Exception as e:
-            print(f"  spotify search failed for '{genre}': {e}", file=sys.stderr)
+            print(f"  iTunes search failed for '{genre}': {e}", file=sys.stderr)
             continue
         added = 0
         for t in tracks:
-            uri = t.get("uri")
+            uri = ITunesClient.track_uri(t) if t.get("trackId") else None
             if uri and uri not in seen:
                 t["_seed_genre"] = genre
                 seen[uri] = t
@@ -144,18 +144,20 @@ async def insert_batch(
         if not vibe or len(v) != EMBED_DIM:
             continue
         metadata = {
-            "spotify_uri": t["uri"],
-            "track": t["name"],
-            "artist": ", ".join(a["name"] for a in t.get("artists", [])),
-            "album": t.get("album", {}).get("name"),
-            "genre": t.get("_seed_genre"),
+            "spotify_uri": ITunesClient.track_uri(t),
+            "track": t["trackName"],
+            "artist": t.get("artistName", ""),
+            "album": t.get("collectionName"),
+            "genre": t.get("primaryGenreName") or t.get("_seed_genre"),
             "vibe_description": vibe,
-            "spotify_url": t.get("external_urls", {}).get("spotify"),
-            "album_art_url": SpotifyClient.album_art_url(t),
-            "preview_url": t.get("preview_url"),  # 30s MP3 — may be None for some tracks
+            "spotify_url": t.get("trackViewUrl"),
+            "album_art_url": ITunesClient.album_art_url(t),
+            "preview_url": t.get("previewUrl"),
+            "provider": "itunes",
+            "itunes_track_id": t.get("trackId"),
         }
         embedding_literal = "[" + ",".join(str(x) for x in v) + "]"
-        rows.append((t["name"], json.dumps(metadata), embedding_literal))
+        rows.append((t["trackName"], json.dumps(metadata), embedding_literal))
     if not rows:
         return 0
     await pool.executemany(
@@ -170,15 +172,10 @@ async def insert_batch(
 
 
 async def main(per_genre: int, batch_size: int) -> int:
-    required = (
-        settings.database_url,
-        settings.spotify_client_id,
-        settings.spotify_client_secret,
-        settings.gemini_api_key,
-    )
+    required = (settings.database_url, settings.gemini_api_key)
     if not all(required):
         print(
-            "Missing env: DATABASE_URL, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, GEMINI_API_KEY",
+            "Missing env: DATABASE_URL, GEMINI_API_KEY",
             file=sys.stderr,
         )
         return 1
@@ -187,13 +184,13 @@ async def main(per_genre: int, batch_size: int) -> int:
     cache = load_vibe_cache()
     print(f"Loaded {len(cache)} cached vibes from {VIBE_CACHE_PATH.name}")
     try:
-        already = await existing_spotify_uris(pool)
+        already = await existing_music_uris(pool)
         print(f"DB already has {len(already)} music rows")
 
-        async with SpotifyClient() as spotify:
-            tracks = await collect_tracks(spotify, per_genre)
+        async with ITunesClient() as itunes:
+            tracks = await collect_tracks(itunes, per_genre)
 
-        new_tracks = [t for t in tracks if t["uri"] not in already]
+        new_tracks = [t for t in tracks if ITunesClient.track_uri(t) not in already]
         print(f"After dedupe: {len(new_tracks)} new tracks to process")
 
         total_inserted = 0
@@ -226,7 +223,7 @@ async def main(per_genre: int, batch_size: int) -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--per-genre", type=int, default=50, help="tracks per Spotify search")
+    parser.add_argument("--per-genre", type=int, default=50, help="tracks per iTunes search")
     parser.add_argument("--batch-size", type=int, default=20, help="tracks per processing batch")
     args = parser.parse_args()
     sys.exit(asyncio.run(main(args.per_genre, args.batch_size)))

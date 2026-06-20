@@ -17,7 +17,7 @@ from typing import Any
 
 from google.genai import types
 
-from app.clients.spotify import SpotifyClient
+from app.clients.itunes import ITunesClient
 from app.clients.tmdb import TMDBClient
 
 
@@ -76,21 +76,21 @@ async def search_movies_by_title(title: str, *, limit: int = 3) -> dict[str, Any
 
 
 async def search_artists(name: str, *, limit: int = 3) -> dict[str, Any]:
-    """Disambiguate an artist the user mentioned and pull their Spotify genre tags.
+    """Disambiguate an artist the user mentioned using iTunes artist search.
 
     Used by the Profiler when the user references an artist (e.g. "I love Kendrick")
-    so the music profile is grounded in that artist's actual catalogue tags.
+    so the music profile is grounded in actual catalogue metadata.
     """
-    async with SpotifyClient() as spotify:
-        artists = await spotify.search_artist(name, limit=limit)
+    async with ITunesClient() as itunes:
+        artists = await itunes.search_artist(name, limit=limit)
     return {
         "query": name,
         "matches": [
             {
-                "id": a.get("id"),
-                "name": a.get("name"),
-                "genres": a.get("genres", []),
-                "popularity": a.get("popularity"),
+                "id": a.get("artistId"),
+                "name": a.get("artistName"),
+                "genres": [a["primaryGenreName"]] if a.get("primaryGenreName") else [],
+                "artist_url": a.get("artistLinkUrl"),
             }
             for a in artists
         ],
@@ -99,22 +99,22 @@ async def search_artists(name: str, *, limit: int = 3) -> dict[str, Any]:
 
 async def get_artist_top_tracks(artist_name: str, *, limit: int = 5) -> dict[str, Any]:
     """Look up an artist's top tracks — useful when the user mentions a reference artist."""
-    async with SpotifyClient() as spotify:
-        artists = await spotify.search_artist(artist_name, limit=1)
+    async with ITunesClient() as itunes:
+        artists = await itunes.search_artist(artist_name, limit=1)
         if not artists:
             return {"artist": artist_name, "found": False, "top_tracks": []}
         artist = artists[0]
-        tracks = await spotify.get_artist_top_tracks(artist["id"])
+        tracks = await itunes.search_track(artist.get("artistName") or artist_name, limit=limit)
     return {
-        "artist": artist["name"],
+        "artist": artist.get("artistName") or artist_name,
         "found": True,
-        "genres": artist.get("genres", []),
-        "popularity": artist.get("popularity"),
+        "genres": [artist["primaryGenreName"]] if artist.get("primaryGenreName") else [],
         "top_tracks": [
             {
-                "track": t.get("name"),
-                "album": t.get("album", {}).get("name"),
-                "popularity": t.get("popularity"),
+                "track": t.get("trackName"),
+                "album": t.get("collectionName"),
+                "genre": t.get("primaryGenreName"),
+                "preview_url": t.get("previewUrl"),
             }
             for t in tracks[:limit]
         ],
@@ -148,7 +148,7 @@ GET_MOVIE_DETAILS = ToolSpec(
 GET_ARTIST_TOP_TRACKS = ToolSpec(
     name="get_artist_top_tracks",
     description=(
-        "Look up an artist's top tracks on Spotify. Use this when the user mentioned a "
+        "Look up an artist's tracks on iTunes. Use this when the user mentioned a "
         "reference artist in their query and you want to ground the music pick against "
         "that artist's actual catalogue."
     ),
@@ -157,7 +157,7 @@ GET_ARTIST_TOP_TRACKS = ToolSpec(
         properties={
             "artist_name": types.Schema(
                 type=types.Type.STRING,
-                description="Artist name to search for on Spotify",
+                description="Artist name to search for on iTunes",
             ),
         },
         required=["artist_name"],
@@ -194,9 +194,9 @@ SEARCH_MOVIES_BY_TITLE = ToolSpec(
 SEARCH_ARTISTS = ToolSpec(
     name="search_artists",
     description=(
-        "Look up artists on Spotify by name. Use this ONLY when the user mentions a "
+        "Look up artists on iTunes by name. Use this ONLY when the user mentions a "
         "specific artist or band by name — never for vague mood queries. Returns top "
-        "matches with their Spotify genre tags so you can ground the music profile."
+        "matches with available genre metadata so you can ground the music profile."
     ),
     parameters=types.Schema(
         type=types.Type.OBJECT,

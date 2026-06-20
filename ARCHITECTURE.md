@@ -156,7 +156,7 @@ music candidates, filters heard tracks, then runs one Gemini call with
 |---|---|
 | `tmdb.py` | TMDB v3 — `search_movie`, `get_movie`, `get_videos`, `discover_popular`, trailer extraction |
 | `spotify.py` | Spotify Web API — Client Credentials flow with token cache, `search_track`, `search_artist`, `get_artist_top_tracks`, `get_related_artists` (with 404 graceful fallback) |
-| `gemini.py` | `google-genai` SDK — `gemini_chat()` for structured-JSON output, `gemini_chat_with_tools()` for the manual tool-calling loop, `embed()`/`embed_one()` for `text-embedding-004` |
+| `gemini.py` | `google-genai` SDK — `gemini_chat()` for structured-JSON output, `gemini_chat_with_tools()` for the manual tool-calling loop, `embed()`/`embed_one()` for `gemini-embedding-001` |
 | `groq_client.py` | Groq Llama 3.3 70B — same `groq_chat()` signature as `gemini_chat()` so the orchestrator can swap on Gemini errors |
 
 ### `app/middleware/`

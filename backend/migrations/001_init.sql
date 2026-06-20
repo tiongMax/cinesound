@@ -4,7 +4,7 @@
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- RAG: movie and music embeddings (Gemini text-embedding-004, 768d)
+-- RAG: movie and music embeddings (Gemini gemini-embedding-001, 768d)
 CREATE TABLE IF NOT EXISTS embeddings (
     id        SERIAL PRIMARY KEY,
     type      TEXT NOT NULL CHECK (type IN ('movie', 'music')),

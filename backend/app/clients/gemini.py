@@ -1,12 +1,13 @@
 """Gemini wrapper: structured-JSON chat + batched embeddings.
 
 `gemini_chat` returns a parsed Pydantic instance when given a `response_schema`.
-`embed` produces 768-d vectors using `text-embedding-004` and batches to keep
+`embed` produces 768-d vectors using `gemini-embedding-001` and batches to keep
 under the per-call payload limit.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import TYPE_CHECKING, TypeVar
 
@@ -23,7 +24,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_CHAT_MODEL = "gemini-2.5-flash"
 DEFAULT_LITE_MODEL = "gemini-2.5-flash-lite"
-EMBED_MODEL = "text-embedding-004"
+EMBED_MODEL = "gemini-embedding-001"
 EMBED_DIM = 768
 EMBED_BATCH = 100  # Gemini hard ceiling for batch embed
 
@@ -45,6 +46,42 @@ def _get_client() -> genai.Client:
         raise GeminiError("GEMINI_API_KEY is not configured")
     _client = genai.Client(api_key=settings.gemini_api_key)
     return _client
+
+
+def _json_prompt_suffix(response_schema: type[BaseModel]) -> str:
+    schema = json.dumps(response_schema.model_json_schema(), ensure_ascii=True)
+    return (
+        "\n\nReturn only a JSON object that validates against this JSON Schema. "
+        "Do not wrap it in Markdown or add commentary.\n"
+        f"{schema}"
+    )
+
+
+def _parse_response(resp: object, response_schema: type[T]) -> T:
+    parsed = getattr(resp, "parsed", None)
+    if parsed is not None:
+        if not isinstance(parsed, response_schema):
+            return response_schema.model_validate(parsed)
+        return parsed
+
+    text = (getattr(resp, "text", None) or "").strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].strip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+
+    if not text:
+        raise GeminiError(f"Gemini returned no parseable JSON: {text!r}")
+
+    try:
+        return response_schema.model_validate_json(text)
+    except Exception as e:
+        raise GeminiError(
+            f"Gemini returned invalid JSON for {response_schema.__name__}: {text!r}"
+        ) from e
 
 
 async def gemini_chat(
@@ -75,7 +112,7 @@ async def gemini_chat(
     )
     parsed = resp.parsed
     if parsed is None:
-        raise GeminiError(f"Gemini returned no parseable JSON: {resp.text!r}")
+        return _parse_response(resp, response_schema)
     if not isinstance(parsed, response_schema):
         # SDK sometimes returns dict — coerce
         return response_schema.model_validate(parsed)
@@ -96,7 +133,8 @@ async def gemini_chat_with_tools(
 
     Pattern:
       1. Build FunctionDeclarations from the ToolSpecs.
-      2. Call Gemini with tools + response_schema set on the config.
+      2. Call Gemini with tools, but parse the final JSON locally because
+         Gemini does not support function calling with JSON response mime type.
       3. If the response contains function_calls, execute the handlers, append
          the function_response parts to history, repeat.
       4. When the model produces a final response with no function_calls,
@@ -128,13 +166,14 @@ async def gemini_chat_with_tools(
     config = types.GenerateContentConfig(
         temperature=temperature,
         tools=[types.Tool(function_declarations=declarations)],
-        response_mime_type="application/json",
-        response_schema=response_schema,
         system_instruction=system,
     )
 
     history: list[types.Content] = [
-        types.Content(role="user", parts=[types.Part(text=prompt)]),
+        types.Content(
+            role="user",
+            parts=[types.Part(text=prompt + _json_prompt_suffix(response_schema))],
+        ),
     ]
 
     for iteration in range(max_tool_iterations + 1):
@@ -153,12 +192,7 @@ async def gemini_chat_with_tools(
 
         if not function_calls:
             # Final response — should be parseable JSON against schema
-            parsed = resp.parsed
-            if parsed is None:
-                raise GeminiError(f"Gemini returned no parseable JSON: {resp.text!r}")
-            if not isinstance(parsed, response_schema):
-                return response_schema.model_validate(parsed)
-            return parsed
+            return _parse_response(resp, response_schema)
 
         if iteration == max_tool_iterations:
             raise GeminiError(
@@ -203,6 +237,7 @@ async def embed(texts: list[str], *, model: str = EMBED_MODEL) -> list[list[floa
         resp = await client.aio.models.embed_content(
             model=model,
             contents=batch,
+            config=types.EmbedContentConfig(output_dimensionality=EMBED_DIM),
         )
         for e in resp.embeddings:
             out.append(list(e.values))

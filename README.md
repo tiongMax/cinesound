@@ -11,7 +11,7 @@
 
 ## What it does
 
-Type a free-form query — "I just finished Interstellar, feeling reflective" — and CineSound runs a LangGraph orchestrator (Joint Profiler → parallel TMDB + Spotify pgvector search → Ranker + Pairer) that returns three distinct movie + music pairings plus a per-pairing note. Cards stream over SSE, each track has a 30-second Spotify preview, and a "Make a playlist" button generates a 5-track vibe-curated follow-up from the same pool. Memory persists per device (cookie) with optional Google one-tap migration to a cross-device user ID.
+Type a free-form query — "I just finished Interstellar, feeling reflective" — and CineSound runs a LangGraph orchestrator (Joint Profiler → parallel TMDB + iTunes-backed pgvector music search → Ranker + Pairer) that returns three distinct movie + music pairings plus a per-pairing note. Cards stream over SSE, tracks can include 30-second iTunes previews, and a "Make a playlist" button generates a 5-track vibe-curated follow-up from the same pool. Memory persists per device (cookie) with optional Google one-tap migration to a cross-device user ID.
 
 ## Prerequisites
 
@@ -25,10 +25,48 @@ Type a free-form query — "I just finished Interstellar, feeling reflective" �
 
 External services needed for full functionality:
 - A **Neon** project (or any Postgres 14+ with pgvector) — local Docker provided for dev
-- API keys: **TMDB**, **Spotify** (Client ID + Secret), **Google AI Studio** (Gemini)
+- API keys: **TMDB**, **Google AI Studio** (Gemini)
 - Optional: **Groq** (fallback), **Google OAuth Client ID** (sign-in)
 
 ## Installation
+
+### Recommended dev startup
+
+Install the root dev helper once:
+
+```powershell
+npm install
+```
+
+Then start the full local stack:
+
+```powershell
+npm run dev:full
+```
+
+This starts Docker Compose, applies backend migrations, then runs the FastAPI
+backend on http://localhost:8000 and the Next.js frontend on
+http://localhost:3000. Use `Ctrl+C` to stop both dev servers.
+
+For later runs when Docker and migrations are already done:
+
+```powershell
+npm run dev
+```
+
+### PowerShell helper
+
+From the repo root on Windows:
+
+```powershell
+.\dev.ps1
+```
+
+If Docker or migrations are already handled elsewhere:
+
+```powershell
+.\dev.ps1 -SkipDocker -SkipMigrate
+```
 
 ### 1. Clone and bring up the local database
 
@@ -139,9 +177,7 @@ await streamQuery("upbeat friday night", "demo:1", {
 | `APP_ENV` | Environment tag returned in `/health` (`dev`, `prod`, etc.) | optional | `dev` |
 | `DATABASE_URL` | Postgres connection string with pgvector extension available | **required** | `postgres://cinesound:cinesound@localhost:15432/cinesound` (matches `docker-compose.yml`) |
 | `TMDB_API_KEY` | TMDB v3 API key for movie search + details | **required** | — |
-| `SPOTIFY_CLIENT_ID` | Spotify app client ID (Client Credentials flow) | **required** | — |
-| `SPOTIFY_CLIENT_SECRET` | Spotify app client secret | **required** | — |
-| `GEMINI_API_KEY` | Google AI Studio API key for Gemini 2.5 Flash + `text-embedding-004` | **required** | — |
+| `GEMINI_API_KEY` | Google AI Studio API key for Gemini 2.5 Flash + `gemini-embedding-001` | **required** | — |
 | `GROQ_API_KEY` | Groq API key for Llama 3.3 70B fallback when Gemini errors | optional | — |
 | `GOOGLE_CLIENT_ID` | OAuth Web Client ID for one-tap sign-in; if unset, `/signin` returns 500 and the frontend hides the button | optional | — |
 | `DAILY_QUERY_CAP` | Max LLM calls per day before `/query` and `/playlist` return the stub `CAP_REACHED_REC` (see `app/middleware/daily_cap.py`) | optional | `500` |
@@ -160,7 +196,7 @@ await streamQuery("upbeat friday night", "demo:1", {
 backend/        FastAPI + LangGraph + uv
   app/
     agents/     profiler · search · ranker · graph · playlist · tools
-    clients/    gemini · groq_client · tmdb · spotify
+    clients/    gemini · groq_client · tmdb · itunes
     middleware/ rate_limit · daily_cap
     routes/     query (SSE) · feedback · signin · me · playlist · share
   migrations/   001_init.sql · 002_shared_pairings.sql
